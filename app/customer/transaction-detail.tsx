@@ -1,51 +1,95 @@
-import { useRouter } from 'expo-router';
-import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { supabase } from '../../config/supabase';
 
 import AlertIcon from '../../assets/icons/alert.svg';
 import BackIcon from '../../assets/icons/arrow-left.svg';
 
 export default function TransactionDetailScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams();
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
+  const [detail, setDetail] = useState<any>(null);
+
+  useEffect(() => {
+    fetchTransactionDetail();
+  }, [id]);
+
+  const fetchTransactionDetail = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select(`
+          *,
+          posts (jenis_kertas),
+          buyer:buyer_id (nama)
+        `)
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+      setDetail(data);
+    } catch (error: any) {
+      Alert.alert("Error", error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMarkAsSold = async () => {
+    setUpdating(true);
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .update({ status: 'verified' })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      Alert.alert("Sukses", "Transaksi telah diverifikasi!");
+      router.back(); // Kembali ke notifikasi
+    } catch (error: any) {
+      Alert.alert("Gagal", error.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  if (loading) return <ActivityIndicator style={{ flex: 1 }} />;
 
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
       <View style={styles.wrapper}>
-        {/* HEADER */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
             <BackIcon width={22} height={22} />
           </TouchableOpacity>
-
-          <Text style={styles.headerTitle}>Buku</Text>
-
-          <View style={styles.placeholder} />
+          <Text style={styles.headerTitle}>{detail?.posts?.jenis_kertas}</Text>
+          <View style={{ width: 22 }} />
         </View>
 
-        {/* CONTENT */}
         <View style={styles.content}>
-          <Text style={styles.mainTitle}>Dibayar oleh Gabriel</Text>
+          <Text style={styles.mainTitle}>Dibayar oleh {detail?.buyer?.nama}</Text>
 
-          {/* IMAGE */}
           <View style={styles.imageWrapper}>
             <Text style={styles.sectionTitle}>Bukti Pembayaran</Text>
-
             <View style={styles.imageContainer}>
               <Image
-                source={require('../../assets/images/bukt-trans.png')}
+                source={{ uri: detail?.payment_proof_url }}
                 style={styles.image}
+                resizeMode="contain"
               />
             </View>
           </View>
 
-          {/* PRICE */}
           <View style={styles.priceSection}>
             <Text style={styles.label}>Harga</Text>
-            <Text style={styles.finalPrice}>Rp 76.000</Text>
+            <Text style={styles.finalPrice}>Rp {detail?.total_price?.toLocaleString('id-ID')}</Text>
           </View>
 
-          {/* ALERT */}
           <View style={styles.alertBox}>
             <AlertIcon width={18} height={18} />
             <Text style={styles.alertText}>
@@ -54,10 +98,13 @@ export default function TransactionDetailScreen() {
           </View>
         </View>
 
-        {/* BUTTON FIXED DI BAWAH */}
         <View style={styles.bottom}>
-          <TouchableOpacity style={styles.button}>
-            <Text style={styles.buttonText}>Tandai sebagai terjual</Text>
+          <TouchableOpacity 
+            style={[styles.button, updating && { opacity: 0.7 }]} 
+            onPress={handleMarkAsSold}
+            disabled={updating}
+          >
+            {updating ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Tandai sebagai terjual</Text>}
           </TouchableOpacity>
         </View>
       </View>

@@ -5,6 +5,7 @@ interface Props {
   type: 'payment' | 'transaction';
   title: string;
   description?: string;
+  imageUrl?: string; // Tambahkan prop imageUrl
   onPress: () => void;
 }
 
@@ -12,25 +13,28 @@ export default function NotificationCard({
   type,
   title,
   description,
+  imageUrl,
   onPress,
 }: Props) {
-  const getIcon = () => {
-    if (type === 'payment') {
-      return require('../assets/images/buku.png'); // sesuaikan nanti
+  // Logika penentuan sumber gambar
+  const renderIcon = () => {
+    if (imageUrl) {
+      return { uri: imageUrl };
     }
-
-    return require('../assets/images/hvs.png'); // sesuaikan nanti
+    // Fallback jika tidak ada gambar dari database
+    return type === 'payment'
+      ? require('../assets/images/buku.png')
+      : require('../assets/images/hvs.png');
   };
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
       <View style={styles.left}>
-        <Image source={getIcon()} style={styles.icon} />
+        <Image source={renderIcon()} style={styles.icon} />
       </View>
 
       <View style={styles.right}>
         <Text style={styles.title}>{title}</Text>
-
         {description && <Text style={styles.description}>{description}</Text>}
       </View>
     </TouchableOpacity>
@@ -44,39 +48,35 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderColor: '#D6D6D6',
-    backgroundColor: '#F9F9F9',
+    borderColor: '#EEEEEE', // Lebih soft
+    backgroundColor: '#FFFFFF', // Putih bersih
   },
-
   left: {
-    width: 50,
-    height: 50,
-    borderRadius: 10,
-    backgroundColor: '#ffffff',
+    width: 54,
+    height: 54,
+    borderRadius: 12,
+    backgroundColor: '#F5F5F5',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+    overflow: 'hidden', // Agar gambar tidak keluar dari border radius
   },
-
   icon: {
-    width: 28,
-    height: 28,
-    resizeMode: 'contain',
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover', // Cover agar lebih estetik seperti feed
   },
-
   right: {
     flex: 1,
   },
-
   title: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#000',
   },
-
   description: {
     fontSize: 12,
-    color: '#777',
+    color: '#666',
     marginTop: 4,
   },
 });

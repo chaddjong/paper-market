@@ -1,52 +1,73 @@
-import { useRouter } from 'expo-router';
-import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-// import AlertIcon from '../../assets/icons/alert.svg';
 import BackIcon from '../../assets/icons/arrow-left.svg';
+import { supabase } from '../../config/supabase';
 
 export default function PaymentSuccessScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams();
+  const [loading, setLoading] = useState(true);
+  const [detail, setDetail] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchDetail = async () => {
+      const { data } = await supabase
+        .from('transactions')
+        .select('*, posts(jenis_kertas), buyer:buyer_id(nama)')
+        .eq('id', id)
+        .single();
+      setDetail(data);
+      setLoading(false);
+    };
+    fetchDetail();
+  }, [id]);
+
+  if (loading) return <ActivityIndicator style={{ flex: 1 }} />;
 
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
       <View style={styles.wrapper}>
-        {/* HEADER */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
             <BackIcon width={22} height={22} />
           </TouchableOpacity>
-
-          <Text style={styles.headerTitle}>Buku</Text>
-
-          <View style={styles.placeholder} />
+          <Text style={styles.headerTitle}>{detail?.posts?.jenis_kertas}</Text>
+          <View style={{ width: 22 }} />
         </View>
 
-        {/* CONTENT */}
         <View style={styles.content}>
-          <Text style={styles.mainTitle}>Dibayar oleh Gabriel</Text>
+          <Text style={styles.mainTitle}>
+            Dibayar oleh {detail?.buyer?.nama}
+          </Text>
 
-          {/* IMAGE */}
           <View style={styles.imageWrapper}>
             <Text style={styles.sectionTitle}>Bukti Pembayaran</Text>
-
             <View style={styles.imageContainer}>
               <Image
-                source={require('../../assets/images/bukt-trans.png')}
+                source={{ uri: detail?.payment_proof_url }}
                 style={styles.image}
+                resizeMode="contain"
               />
             </View>
           </View>
 
-          {/* PRICE */}
           <View style={styles.priceSection}>
             <Text style={styles.label}>Harga</Text>
-            <Text style={styles.finalPrice}>Rp 76.000</Text>
+            <Text style={styles.finalPrice}>
+              Rp {detail?.total_price?.toLocaleString('id-ID')}
+            </Text>
           </View>
         </View>
 
-        {/* BUTTON FIXED DI BAWAH */}
         <View style={styles.bottom}>
           <View style={styles.buttonDisabled}>
             <Text style={styles.buttonTextDisabled}>Terjual</Text>
@@ -170,7 +191,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     marginHorizontal: 50,
   },
-  
+
   buttonDisabled: {
     backgroundColor: '#BDBDBD', // abu-abu = disabled
     paddingVertical: 14,
