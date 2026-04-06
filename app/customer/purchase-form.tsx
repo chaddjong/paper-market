@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -19,85 +20,95 @@ export default function PurchaseForm() {
   const router = useRouter();
 
   const [totalKg, setTotalKg] = useState('');
-  const [condition, setCondition] = useState('Rusak');
+  const [condition] = useState('Rusak');
 
   const estimatedPrice = 'Rp. 76.000';
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <View style={styles.container}>
-          {/* HEADER */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()}>
-              <BackIcon width={22} height={22} />
-            </TouchableOpacity>
+      <View style={{ flex: 1 }}>
+        {/* KEYBOARD AREA */}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={styles.container}>
+            {/* HEADER */}
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => router.back()}>
+                <BackIcon width={22} height={22} />
+              </TouchableOpacity>
 
-            <Text style={styles.headerTitle}>Pembelian</Text>
-          </View>
+              <Text style={styles.headerTitle}>Pembelian</Text>
+            </View>
 
-          {/* WARNING BOX */}
-          <View style={styles.alertBox}>
-            <AlertIcon width={18} height={18} />
-            <Text style={styles.alertText}>
-              Pastikan mengisi form ini saat anda bertemu dengan penjual kertas
-            </Text>
-          </View>
-
-          {/* FORM */}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Jenis Kertas</Text>
-
-            <TextInput
-              style={[styles.input, styles.disabledInput]}
-              value="Map Jilid"
-              editable={false}
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Total Pembelian Kg</Text>
-
-            <TextInput
-              style={styles.input}
-              placeholder="5 kg"
-              value={totalKg}
-              onChangeText={setTotalKg}
-              keyboardType="numeric"
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Kondisi Kertas</Text>
-
-            <TextInput
-              style={[styles.input, styles.disabledInput]}
-              value={condition}
-              editable={false}
-            />
-          </View>
-
-          {/* ESTIMASI */}
-          <View style={styles.priceContainer}>
-            <Text style={styles.label}>Estimasi Harga</Text>
-
-            <Text style={styles.price}>{estimatedPrice}</Text>
-          </View>
-
-          {/* BUTTON */}
-          <View style={styles.bottomContainer}>
-            <TouchableOpacity
-              style={styles.button}
-              onPress={() => router.push('/customer/upload-payment-proof')}
+            {/* SCROLLABLE CONTENT */}
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
             >
-              <Text style={styles.buttonText}>Upload Bukti Pembayaran</Text>
-            </TouchableOpacity>
+              {/* WARNING BOX */}
+              <View style={styles.alertBox}>
+                <AlertIcon width={18} height={18} />
+                <Text style={styles.alertText}>
+                  Pastikan mengisi form ini saat anda bertemu dengan penjual
+                  kertas
+                </Text>
+              </View>
+
+              {/* FORM */}
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Jenis Kertas</Text>
+
+                <TextInput
+                  style={[styles.input, styles.disabledInput]}
+                  value="Map Jilid"
+                  editable={false}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Total Pembelian Kg</Text>
+
+                <TextInput
+                  style={styles.input}
+                  placeholder="5 kg"
+                  value={totalKg}
+                  onChangeText={setTotalKg}
+                  keyboardType="numeric"
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Kondisi Kertas</Text>
+
+                <TextInput
+                  style={[styles.input, styles.disabledInput]}
+                  value={condition}
+                  editable={false}
+                />
+              </View>
+
+              {/* ESTIMASI */}
+              <View style={styles.priceContainer}>
+                <Text style={styles.label}>Estimasi Harga</Text>
+                <Text style={styles.price}>{estimatedPrice}</Text>
+              </View>
+            </ScrollView>
           </View>
+        </KeyboardAvoidingView>
+
+        {/* FIXED BUTTON (AMAN) */}
+        <View style={styles.bottomContainer}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => router.push('/customer/upload-payment-proof')}
+          >
+            <Text style={styles.buttonText}>Upload Bukti Pembayaran</Text>
+          </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -116,6 +127,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     backgroundColor: '#ffffff',
+  },
+
+  scrollContent: {
+    paddingBottom: 140,
   },
 
   header: {
@@ -188,6 +203,7 @@ const styles = StyleSheet.create({
   bottomContainer: {
     marginTop: 'auto',
     marginBottom: 30,
+    marginHorizontal: 50,
   },
 
   button: {

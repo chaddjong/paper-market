@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   StyleSheet,
   Text,
@@ -9,8 +12,9 @@ import {
   View,
 } from 'react-native';
 
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { supabase } from '../../config/supabase';
 
 import BackIcon from '../../assets/icons/arrow-left.svg';
 import MapIcon from '../../assets/icons/map.svg';
@@ -19,15 +23,81 @@ import WhatsappIcon from '../../assets/icons/whatsapp.svg';
 export default function ProductDetail() {
   const router = useRouter();
 
-  const product = {
-    title: 'Buku',
-    image: require('../../assets/images/hvs.png'),
-    postedBy: 'Gabriel',
-    postedTime: '3 hari yang lalu',
-    weight: '15 Kg',
-    condition: 'Rusak',
-    location: 'Maumbi, Minahasa Utara',
+  const { id } = useLocalSearchParams(); // Ambil ID dari URL
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchProductDetail = useCallback(async () => {
+    if (!id) {
+      console.log('ID tidak ditemukan di Params');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('posts')
+        .select(
+          `
+          *,
+          users (
+            nama,
+            phone
+          )
+        `,
+        )
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+      setProduct(data);
+    } catch (error: any) {
+      console.error('Fetch Detail Error:', error.message);
+      Alert.alert('Error', 'Gagal memuat detail produk');
+      router.back();
+    } finally {
+      setLoading(false);
+    }
+  }, [id, router]);
+
+  useEffect(() => {
+    fetchProductDetail();
+  }, [fetchProductDetail]);
+
+  const handleWhatsApp = () => {
+    if (!product?.users?.phone) {
+      return Alert.alert('Error', 'Nomor WhatsApp tidak tersedia');
+    }
+
+    // Format nomor HP (Hapus karakter non-angka dan pastikan mulai dengan kode negara)
+    let phone = product.users.phone.replace(/[^0-9]/g, '');
+    if (phone.startsWith('0')) {
+      phone = '62' + phone.slice(1);
+    }
+
+    const message = `Halo ${product.users.nama}, saya tertarik dengan postingan ${product.jenis_kertas} di aplikasi. Apakah masih tersedia?`;
+    const url = `whatsapp://send?phone=${phone}&text=${encodeURIComponent(message)}`;
+
+    Linking.canOpenURL(url).then((supported) => {
+      if (supported) {
+        Linking.openURL(url);
+      } else {
+        // Jika aplikasi WA tidak terinstall, buka via browser
+        Linking.openURL(
+          `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
+        );
+      }
+    });
   };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center' }]}>
+        <ActivityIndicator size="large" color="#2F343A" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -41,38 +111,52 @@ export default function ProductDetail() {
             <TouchableOpacity onPress={() => router.back()}>
               <BackIcon width={22} height={22} />
             </TouchableOpacity>
-
-            <Text style={styles.headerTitle}>{product.title}</Text>
+            <Text style={styles.headerTitle}>{product.jenis_kertas}</Text>
           </View>
 
           {/* CONTENT */}
           <View style={styles.content}>
-            <Image source={product.image} style={styles.image} />
+            <Image source={{ uri: product.image_url }} style={styles.image} />
 
-            <Text style={styles.postInfo}>
-              Di posting {product.postedTime} oleh {product.postedBy}
-            </Text>
+            <View style={styles.infoBox}>
+              <Text style={styles.postInfo}>
+                Diposting oleh{' '}
+                <Text style={{ fontWeight: 'bold' }}>
+                  {product.users?.nama}
+                </Text>{' '}
+                pada {new Date(product.created_at).toLocaleDateString('id-ID')}
+              </Text>
 
-            <Text style={styles.weight}>{product.weight}</Text>
+              <Text style={styles.weight}>{product.berat_kg} Kg</Text>
+              <Text style={styles.condition}>
+                Kondisi: {product.kondisi_kertas}
+              </Text>
 
-            <Text style={styles.condition}>{product.condition}</Text>
-
-            <View style={styles.locationRow}>
-              <MapIcon width={16} height={16} />
-              <Text style={styles.location}>{product.location}</Text>
+              <View style={styles.locationRow}>
+                <MapIcon width={16} height={16} />
+                <Text style={styles.location}>{product.alamat}</Text>
+              </View>
             </View>
           </View>
 
           {/* BOTTOM ACTION */}
           <View style={styles.bottomAction}>
-            <TouchableOpacity style={styles.whatsappButton}>
+            <TouchableOpacity
+              style={styles.whatsappButton}
+              onPress={handleWhatsApp}
+            >
               <WhatsappIcon width={18} height={18} />
               <Text style={styles.whatsappText}>Chat WhatsApp</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.buyButton}
-              onPress={() => router.push('/customer/purchase-form')}
+              onPress={() =>
+                router.push({
+                  pathname: '/customer/purchase-form',
+                  params: { id: product.id },
+                })
+              }
             >
               <Text style={styles.buyText}>Lanjut Pembelian</Text>
             </TouchableOpacity>
@@ -126,6 +210,8 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
     marginBottom: 10,
   },
+
+  infoBox: { gap: 10 },
 
   postInfo: {
     fontSize: 13,

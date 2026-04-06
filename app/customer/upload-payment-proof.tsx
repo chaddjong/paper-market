@@ -39,15 +39,14 @@ export default function UploadPaymentProof() {
 
             <Text style={styles.uploadText}>Upload Gambar</Text>
           </TouchableOpacity>
-
-          {/* BUTTON */}
-          <View style={styles.bottomContainer}>
-            <TouchableOpacity style={styles.disabledButton}>
-              <Text style={styles.disabledText}>Selesai</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </KeyboardAvoidingView>
+      {/* BUTTON */}
+      <View style={styles.bottomContainer}>
+        <TouchableOpacity style={styles.disabledButton}>
+          <Text style={styles.disabledText}>Selesai</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -110,6 +109,7 @@ const styles = StyleSheet.create({
   bottomContainer: {
     marginTop: 'auto',
     marginBottom: 30,
+    marginHorizontal: 50,
   },
 
   disabledButton: {

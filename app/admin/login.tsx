@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -15,40 +16,69 @@ import Logo from '../../assets/images/logo-splash-screen.svg';
 import { supabase } from '../../config/supabase';
 import { useAuth } from '../../context/AuthContext';
 
-export default function CustomerLogin() {
+export default function AdminLogin() {
   const router = useRouter();
   const { setRole } = useAuth();
-  const [identifier, setIdentifier] = useState('');
+
+  const [identifier, setIdentifier] = useState(''); // Bisa email atau HP
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
+  const handleAdminLogin = async () => {
     const cleanId = identifier.trim();
-    let emailToLogin = cleanId;
+    if (!cleanId || !password) {
+      return Alert.alert('Error', 'Email/No HP dan Password harus diisi');
+    }
 
+    setLoading(true);
     try {
-      // Jika input adalah nomor HP (tidak ada @)
+      let emailToLogin = cleanId;
+
+      // 1. Logika Login via Nomor HP (Cari email terkait di tabel users)
       if (!cleanId.includes('@')) {
-        const { data, error } = await supabase
+        const { data: userData, error: userError } = await supabase
           .from('users')
           .select('email')
           .eq('phone', cleanId)
           .single();
 
-        if (error || !data) throw new Error('Nomor HP tidak terdaftar');
-        emailToLogin = data.email;
+        if (userError || !userData) throw new Error('Nomor HP tidak terdaftar');
+        emailToLogin = userData.email;
       }
 
-      // Login dengan Email & Password
-      const { error } = await supabase.auth.signInWithPassword({
-        email: emailToLogin,
-        password: password,
-      });
+      // 2. Login Utama ke Supabase Auth
+      const { data: authData, error: authError } =
+        await supabase.auth.signInWithPassword({
+          email: emailToLogin,
+          password: password,
+        });
 
-      if (error) throw error;
+      if (authError) throw authError;
 
-      router.push('/customer/homepage');
+      if (authData.user) {
+        // 3. PROTEKSI ADMIN: Cek Role di Tabel Users
+        const { data: profile, error: profileError } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', authData.user.id)
+          .single();
+
+        if (profileError || !profile) throw new Error('Gagal mengambil profil');
+
+        // Jika Role bukan Admin, langsung Logout paksa
+        if (profile.role !== 'admin') {
+          await supabase.auth.signOut(); // Kick user dari session
+          throw new Error('Akses Ditolak: Anda bukan Admin!');
+        }
+
+        // 4. Berhasil: Update Context dan Masuk Homepage Admin
+        setRole('admin');
+        router.push('/admin/homepage');
+      }
     } catch (error: any) {
-      Alert.alert('Login Gagal', error.message);
+      Alert.alert('Login Admin Gagal', error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -61,45 +91,41 @@ export default function CustomerLogin() {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Logo */}
         <Logo width={60} height={60} />
+        <Text style={styles.title}>Admin Login</Text>
 
-        {/* Title */}
-        <Text style={styles.title}>Customer Login</Text>
-
-        {/* Card */}
         <View style={styles.card}>
-          {/* Email */}
           <Text style={styles.label}>Email / Nomor Whatsapp</Text>
           <TextInput
             style={styles.input}
-            placeholder="Masukan email/nomor anda"
+            placeholder="Masukan email/nomor admin"
             placeholderTextColor="#999"
+            value={identifier}
             onChangeText={setIdentifier}
+            autoCapitalize="none"
           />
 
-          {/* Password */}
           <Text style={[styles.label, { marginTop: 15 }]}>Password</Text>
           <TextInput
             style={styles.input}
             placeholder="Masukan password anda"
             placeholderTextColor="#999"
             secureTextEntry
+            value={password}
             onChangeText={setPassword}
           />
 
-          {/* Login */}
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-            <Text style={styles.loginText}>Log in</Text>
+          <TouchableOpacity
+            style={[styles.loginButton, loading && { opacity: 0.7 }]}
+            onPress={handleAdminLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.loginText}>Log in</Text>
+            )}
           </TouchableOpacity>
-
-          {/* Signup */}
-          <View style={styles.signupRow}>
-            <Text>Belum punya akun? </Text>
-            <TouchableOpacity onPress={() => router.push('/customer/signup')}>
-              <Text style={styles.signupText}>Sign Up</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

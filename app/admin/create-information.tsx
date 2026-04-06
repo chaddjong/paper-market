@@ -14,30 +14,28 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../config/supabase';
-import { useAuth } from '../../context/AuthContext';
 
 import BackIcon from '../../assets/icons/arrow-left.svg';
 import UploadIcon from '../../assets/icons/upload.svg';
 
-export default function CreatePost() {
+export default function CreateInformation() {
   const router = useRouter();
-  const { user } = useAuth();
 
-  // Form States
+  // States
   const [image, setImage] = useState<string | null>(null);
-  const [jenisKertas, setJenisKertas] = useState('');
-  const [kondisiKertas, setKondisiKertas] = useState('');
-  const [alamat, setAlamat] = useState('');
-  const [berat, setBerat] = useState('');
+  const [title, setTitle] = useState('');
+  const [price, setPrice] = useState('');
+  const [condition, setCondition] = useState('');
   const [loading, setLoading] = useState(false);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [4, 3],
+      aspect: [1, 1], // Information card biasanya square lebih bagus
       quality: 0.7,
     });
 
@@ -46,26 +44,24 @@ export default function CreatePost() {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!image || !jenisKertas || !kondisiKertas || !alamat || !berat) {
-      Alert.alert('Error', 'Harap lengkapi semua data dan foto.');
-      return;
+  const handleCreate = async () => {
+    if (!image || !title || !price || !condition) {
+      return Alert.alert('Error', 'Harap isi semua data dan upload gambar.');
     }
 
     setLoading(true);
     try {
-      // 1. Proses Gambar menjadi Blob untuk Supabase
+      // 1. Upload ke Storage (Folder informations)
       const response = await fetch(image);
       const blob = await response.blob();
       const arrayBuffer = await new Response(blob).arrayBuffer();
 
       const fileExt = image.split('.').pop();
-      const fileName = `${user?.id}_${Date.now()}.${fileExt}`;
-      const filePath = `posts/${fileName}`;
+      const fileName = `info_${Date.now()}.${fileExt}`;
+      const filePath = `informations/${fileName}`; // Masuk ke folder informations
 
-      // 2. Upload ke Supabase Storage
-      const { data: storageData, error: storageError } = await supabase.storage
-        .from('post-images') // Nama bucket Anda
+      const { error: storageError } = await supabase.storage
+        .from('post-images')
         .upload(filePath, arrayBuffer, {
           contentType: blob.type,
           upsert: true,
@@ -73,36 +69,29 @@ export default function CreatePost() {
 
       if (storageError) throw storageError;
 
-      // 3. Dapatkan Public URL
+      // 2. Ambil Public URL
       const { data: urlData } = supabase.storage
         .from('post-images')
         .getPublicUrl(filePath);
 
       const publicUrl = urlData.publicUrl;
 
-      // 4. Simpan Metadata ke Tabel 'posts' di Supabase
-      const { error: dbError } = await supabase.from('posts').insert([
+      // 3. Simpan ke Tabel informations
+      const { error: dbError } = await supabase.from('informations').insert([
         {
-          user_id: user?.id,
+          title: title,
+          price: parseInt(price),
+          condition: condition,
           image_url: publicUrl,
-          jenis_kertas: jenisKertas,
-          kondisi_kertas: kondisiKertas,
-          alamat: alamat,
-          berat_kg: parseFloat(berat),
-          status: 'pending',
         },
       ]);
 
       if (dbError) throw dbError;
 
-      Alert.alert('Sukses', 'Postingan berhasil dibuat!');
-      router.replace('/customer/homepage');
+      Alert.alert('Sukses', 'Informasi baru berhasil dibuat!');
+      router.replace('/admin/homepage');
     } catch (error: any) {
-      console.error(error);
-      Alert.alert(
-        'Gagal',
-        error.message || 'Terjadi kesalahan saat mengunggah.',
-      );
+      Alert.alert('Gagal', error.message);
     } finally {
       setLoading(false);
     }
@@ -119,13 +108,14 @@ export default function CreatePost() {
             <TouchableOpacity onPress={() => router.back()}>
               <BackIcon width={22} height={22} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Buat Postingan</Text>
+            <Text style={styles.headerTitle}>Buat Informasi</Text>
           </View>
 
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
           >
+            {/* Upload Area */}
             <TouchableOpacity style={styles.uploadCard} onPress={pickImage}>
               {image ? (
                 <Image source={{ uri: image }} style={styles.previewImage} />
@@ -137,48 +127,38 @@ export default function CreatePost() {
               )}
             </TouchableOpacity>
 
+            {/* FORM */}
             <View style={styles.formGroup}>
               <Text style={styles.label}>Jenis Kertas</Text>
               <TextInput
-                placeholder="Jenis Kertas (HVS, Koran, dll)"
+                placeholder="Contoh: Kertas HVS"
                 placeholderTextColor="#9A9A9A"
                 style={styles.input}
-                value={jenisKertas}
-                onChangeText={setJenisKertas}
+                value={title}
+                onChangeText={setTitle}
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Harga Kertas / Kg</Text>
+              <TextInput
+                placeholder="Contoh: 1000"
+                placeholderTextColor="#9A9A9A"
+                keyboardType="numeric"
+                style={styles.input}
+                value={price}
+                onChangeText={setPrice}
               />
             </View>
 
             <View style={styles.formGroup}>
               <Text style={styles.label}>Kondisi Kertas</Text>
               <TextInput
-                placeholder="Kondisi Kertas (Bersih, Campuran, dll)"
+                placeholder="Contoh: Bersih & Kering"
                 placeholderTextColor="#9A9A9A"
                 style={styles.input}
-                value={kondisiKertas}
-                onChangeText={setKondisiKertas}
-              />
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Alamat</Text>
-              <TextInput
-                placeholder="Deskripsi Tempat Tinggal"
-                placeholderTextColor="#9A9A9A"
-                style={styles.input}
-                value={alamat}
-                onChangeText={setAlamat}
-              />
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Total Berat Kilogram</Text>
-              <TextInput
-                placeholder="Contoh: 10"
-                placeholderTextColor="#9A9A9A"
-                keyboardType="numeric"
-                style={styles.input}
-                value={berat}
-                onChangeText={setBerat}
+                value={condition}
+                onChangeText={setCondition}
               />
             </View>
           </ScrollView>
@@ -187,13 +167,13 @@ export default function CreatePost() {
 
       <TouchableOpacity
         style={[styles.submitButton, loading && { opacity: 0.7 }]}
-        onPress={handleSubmit}
+        onPress={handleCreate}
         disabled={loading}
       >
         {loading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.submitText}>Kirim Postingan</Text>
+          <Text style={styles.submitText}>Buat</Text>
         )}
       </TouchableOpacity>
     </SafeAreaView>
@@ -236,11 +216,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
 
-  previewImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
+  previewImage: { width: '100%', height: '100%', resizeMode: 'cover' },
 
   uploadCard: {
     backgroundColor: '#FFF',

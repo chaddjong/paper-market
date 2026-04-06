@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,6 +11,7 @@ import {
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { supabase } from '../../config/supabase';
 
 import BottomNavbar from '../../components/BottomNavbar';
 import Header from '../../components/Header';
@@ -34,40 +37,37 @@ export default function Homepage() {
     },
   ];
 
-  const marketData = [
-    {
-      title: 'Kertas HVS',
-      image: require('../../assets/images/hvs.png'),
-      time: '3 hari yang lalu',
-      condition: 'Bagus',
-      location: 'Maumbi, Minahasa Utara',
-      weight: '15 Kg',
-    },
-    {
-      title: 'Buku',
-      image: require('../../assets/images/hvs.png'),
-      time: '3 hari yang lalu',
-      condition: 'Rusak',
-      location: 'Maumbi, Minahasa Utara',
-      weight: '20 Kg',
-    },
-    {
-      title: 'Map Jilid',
-      image: require('../../assets/images/hvs.png'),
-      time: '3 hari yang lalu',
-      condition: 'Bagus',
-      location: 'Maumbi, Minahasa Utara',
-      weight: '35 Kg',
-    },
-    {
-      title: 'Majalah',
-      image: require('../../assets/images/hvs.png'),
-      time: '3 hari yang lalu',
-      condition: 'Bagus',
-      location: 'Maumbi, Minahasa Utara',
-      weight: '4 Kg',
-    },
-  ];
+  const [marketPosts, setMarketPosts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Fungsi untuk mengambil data dari Supabase
+  const fetchPosts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .order('created_at', { ascending: false }); // Postingan terbaru di atas
+
+      if (error) throw error;
+      setMarketPosts(data || []);
+    } catch (error: any) {
+      console.error('Error fetching posts:', error.message);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  // Fungsi Pull to Refresh
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchPosts();
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -81,9 +81,11 @@ export default function Homepage() {
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
           >
             <Text style={styles.sectionTitle}>Informasi</Text>
-
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -96,16 +98,38 @@ export default function Homepage() {
 
             <Text style={styles.sectionTitle}>Market</Text>
 
-            <View style={styles.marketGrid}>
-              {marketData.map((item, index) => (
-                <MarketCard key={index} data={item} />
-              ))}
-            </View>
+            {loading ? (
+              <ActivityIndicator
+                size="large"
+                color="#2F343A"
+                style={{ marginTop: 20 }}
+              />
+            ) : (
+              <View style={styles.marketGrid}>
+                {marketPosts.length > 0 ? (
+                  marketPosts.map((item) => (
+                    <MarketCard
+                      key={item.id}
+                      data={{
+                        id: item.id,
+                        title: item.jenis_kertas,
+                        image: item.image_url, // URL dari Supabase Storage
+                        time: new Date(item.created_at).toLocaleDateString(), // Sederhanakan waktu
+                        condition: item.kondisi_kertas,
+                        location: item.alamat,
+                        weight: `${item.berat_kg} Kg`,
+                      }}
+                    />
+                  ))
+                ) : (
+                  <Text style={styles.emptyText}>Belum ada postingan.</Text>
+                )}
+              </View>
+            )}
           </ScrollView>
-
-          <BottomNavbar />
         </View>
       </KeyboardAvoidingView>
+      <BottomNavbar />
     </SafeAreaView>
   );
 }
@@ -146,5 +170,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+  },
+
+  emptyText: {
+    textAlign: 'center',
+    color: '#999',
+    marginTop: 20,
+    width: '100%',
   },
 });

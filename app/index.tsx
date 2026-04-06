@@ -1,9 +1,11 @@
+import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Logo from '../assets/images/logo-splash-screen.svg';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { setRole } = useAuth();
 
   return (
     <View style={styles.container}>
@@ -16,14 +18,20 @@ export default function HomeScreen() {
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={styles.button}
-          onPress={() => router.push('/customer/login')}
+          onPress={() => {
+            setRole('customer');
+            router.push('/customer/login');
+          }}
         >
           <Text style={styles.buttonText}>Customer</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.button}
-          onPress={() => router.push('/admin')}
+          onPress={() => {
+            setRole('admin');
+            router.push('/admin/login');
+          }}
         >
           <Text style={styles.buttonText}>Admin</Text>
         </TouchableOpacity>

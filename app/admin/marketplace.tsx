@@ -17,7 +17,7 @@ import { supabase } from '../../config/supabase';
 
 import FilterModal from '@/components/FilterModal';
 import BottomNavbar from '../../components/BottomNavbar';
-import MarketCard from '../../components/MarketCard';
+import MarketCard from '../admin/components/AdminMarketCard';
 
 import FilterAppliedIcon from '../../assets/icons/filter-applied.svg';
 import FilterIcon from '../../assets/icons/filter.svg';

@@ -2,14 +2,11 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import MapIcon from '../assets/icons/map.svg';
+import MapIcon from '../../../assets/icons/map.svg';
 
-export default function MarketCard({ data }: any) {
+export default function AdminMarketCard({ data }: any) {
   const router = useRouter();
 
-  // Logika untuk menentukan sumber gambar
-  // Jika data.image adalah string (URL dari Supabase), gunakan { uri }
-  // Jika data.image adalah number (hasil dari require), gunakan langsung
   const imageSource =
     typeof data.image === 'string' ? { uri: data.image } : data.image;
 
@@ -18,26 +15,32 @@ export default function MarketCard({ data }: any) {
       style={styles.card}
       onPress={() =>
         router.push({
-          pathname: '/customer/product-detail',
+          pathname: '/admin/edit-post',
           params: { id: data.id },
         })
       }
     >
-      {/* Update source di sini */}
       <Image source={imageSource} style={styles.image} />
-
       <Text style={styles.title}>{data.title}</Text>
-
       <Text style={styles.time}>{data.time}</Text>
-
       <Text style={styles.condition}>{data.condition}</Text>
-
       <View style={styles.locationRow}>
         <MapIcon width={14} height={14} />
         <Text style={styles.location}>{data.location}</Text>
       </View>
-
       <Text style={styles.weight}>{data.weight}</Text>
+
+      <TouchableOpacity
+        style={styles.editButton}
+        onPress={() =>
+          router.push({
+            pathname: '/admin/edit-post',
+            params: { id: data.id },
+          })
+        }
+      >
+        <Text style={styles.editText}>Edit</Text>
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 }
@@ -49,18 +52,18 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 12,
     marginBottom: 14,
-    marginHorizontal: '1%',
+    marginLeft: 1,
+    marginRight: 1,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.5,
     shadowRadius: 5,
     elevation: 2,
   },
 
   image: {
     width: '100%',
-    height: 100,
-    resizeMode: 'cover',
-    borderRadius: 8,
+    height: 90,
+    resizeMode: 'contain',
     marginBottom: 8,
   },
 
@@ -95,5 +98,18 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontWeight: '600',
     color: '#3FA34D',
+  },
+
+  editButton: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#000000',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+
+  editText: {
+    fontSize: 11,
+    padding: 8,
   },
 });

@@ -1,7 +1,5 @@
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -12,62 +10,9 @@ import {
   View,
 } from 'react-native';
 import Logo from '../../assets/images/logo-splash-screen.svg';
-import { supabase } from '../../config/supabase';
 
-export default function CustomerSignup() {
+export default function AdminSignup() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
-    nama: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    phone: '',
-  });
-
-  const handleSignup = async () => {
-    const { nama, email, password, confirmPassword, phone } = formData;
-
-    if (!nama || !email || !password || !phone)
-      return Alert.alert('Error', 'Semua field harus diisi');
-    if (password !== confirmPassword)
-      return Alert.alert('Error', 'Password tidak cocok');
-
-    try {
-      // 1. SignUp ke Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            display_name: nama,
-            phone_number: phone,
-          },
-        },
-      });
-
-      if (authError) throw authError;
-
-      if (authData.user) {
-        // 2. Simpan data ke tabel 'users'
-        const { error: dbError } = await supabase.from('users').insert([
-          {
-            id: authData.user.id,
-            nama: nama,
-            email: email,
-            phone: phone,
-            role: 'customer',
-          },
-        ]);
-
-        if (dbError) throw dbError;
-      }
-
-      Alert.alert('Sukses', 'Akun berhasil dibuat! Silahkan login.');
-      router.push('/customer/login');
-    } catch (error: any) {
-      Alert.alert('Signup Gagal', error.message);
-    }
-  };
 
   return (
     <KeyboardAvoidingView
@@ -82,7 +27,7 @@ export default function CustomerSignup() {
         <Logo width={60} height={60} />
 
         {/* Title */}
-        <Text style={styles.title}>Sign Up as Customer</Text>
+        <Text style={styles.title}>Sign Up as Admin</Text>
 
         {/* Card */}
         <View style={styles.card}>
@@ -92,8 +37,6 @@ export default function CustomerSignup() {
             style={styles.input}
             placeholder="Masukan nama"
             placeholderTextColor="#999"
-            value={formData.nama}
-            onChangeText={(txt) => setFormData({ ...formData, nama: txt })}
           />
 
           {/* Email */}
@@ -102,8 +45,6 @@ export default function CustomerSignup() {
             style={styles.input}
             placeholder="Masukan email anda"
             placeholderTextColor="#999"
-            value={formData.email}
-            onChangeText={(txt) => setFormData({ ...formData, email: txt })}
           />
 
           {/* Password */}
@@ -113,8 +54,6 @@ export default function CustomerSignup() {
             placeholder="Masukan password anda"
             secureTextEntry
             placeholderTextColor="#999"
-            value={formData.password}
-            onChangeText={(txt) => setFormData({ ...formData, password: txt })}
           />
 
           {/* Konfirmasi Password */}
@@ -124,10 +63,6 @@ export default function CustomerSignup() {
             placeholder="Masukan kembali password"
             secureTextEntry
             placeholderTextColor="#999"
-            value={formData.confirmPassword}
-            onChangeText={(txt) =>
-              setFormData({ ...formData, confirmPassword: txt })
-            }
           />
 
           {/* Nomor Whatsapp */}
@@ -137,12 +72,13 @@ export default function CustomerSignup() {
             placeholder="Masukan nomor whatsapp"
             placeholderTextColor="#999"
             keyboardType="phone-pad"
-            value={formData.phone}
-            onChangeText={(txt) => setFormData({ ...formData, phone: txt })}
           />
 
           {/* Sign Up Button */}
-          <TouchableOpacity style={styles.signupButton} onPress={handleSignup}>
+          <TouchableOpacity
+            style={styles.signupButton}
+            onPress={() => router.push('/customer/login')}
+          >
             <Text style={styles.signupText}>Sign up</Text>
           </TouchableOpacity>
 

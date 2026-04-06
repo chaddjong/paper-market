@@ -70,10 +70,9 @@ export default function AccountDetailsScreen() {
             </View>
           </View>
         </ScrollView>
-
-        {/* Bottom Navbar */}
-        <BottomNavbar />
       </KeyboardAvoidingView>
+      {/* Bottom Navbar */}
+      <BottomNavbar />
     </SafeAreaView>
   );
 }
@@ -97,7 +96,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 14,
-    gap: 10
+    gap: 10,
   },
 
   backIcon: {

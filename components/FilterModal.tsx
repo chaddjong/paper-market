@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Modal,
   StyleSheet,
@@ -10,14 +10,31 @@ import {
 
 import CloseIcon from '../assets/icons/close.svg';
 
+interface FilterData {
+  jenisKertas: string | null;
+  minBerat: string;
+  maxBerat: string;
+}
+
 interface Props {
   visible: boolean;
   onClose: () => void;
+  filters: FilterData;
+  setFilters: (filters: FilterData) => void;
 }
 
-export default function FilterModal({ visible, onClose }: Props) {
+export default function FilterModal({
+  visible,
+  onClose,
+  filters,
+  setFilters,
+}: Props) {
   const categories = ['Kertas HVS', 'Buku', 'Map Jilid', 'Majalah', 'Koran'];
-  const [selectedType, setSelectedType] = useState<string | null>(null);
+
+  const toggleCategory = (item: string) => {
+    const newVal = filters.jenisKertas === item ? null : item;
+    setFilters({ ...filters, jenisKertas: newVal });
+  };
 
   return (
     <Modal visible={visible} transparent animationType="slide">
@@ -26,24 +43,21 @@ export default function FilterModal({ visible, onClose }: Props) {
           {/* HEADER */}
           <View style={styles.header}>
             <Text style={styles.title}>Filter</Text>
-
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <CloseIcon width={20} height={20} />
+              <CloseIcon width={24} height={24} />
             </TouchableOpacity>
           </View>
 
           {/* JENIS */}
           <Text style={styles.sectionTitle}>Jenis</Text>
-
           <View style={styles.chipContainer}>
             {categories.map((item, index) => {
-              const isSelected = selectedType === item;
-
+              const isSelected = filters.jenisKertas === item;
               return (
                 <TouchableOpacity
                   key={index}
                   style={[styles.chip, isSelected && styles.chipSelected]}
-                  onPress={() => setSelectedType(item)}
+                  onPress={() => toggleCategory(item)}
                 >
                   <Text
                     style={[
@@ -60,18 +74,29 @@ export default function FilterModal({ visible, onClose }: Props) {
 
           {/* BERAT */}
           <Text style={styles.sectionTitle}>Berat</Text>
+          <View style={styles.inputContainer}>
+            <TextInput
+              placeholder="Minimum"
+              placeholderTextColor="#BDBDBD"
+              keyboardType="numeric"
+              style={styles.input}
+              value={filters.minBerat}
+              onChangeText={(txt) => setFilters({ ...filters, minBerat: txt })}
+            />
+            <TextInput
+              placeholder="Maximum"
+              placeholderTextColor="#BDBDBD"
+              keyboardType="numeric"
+              style={styles.input}
+              value={filters.maxBerat}
+              onChangeText={(txt) => setFilters({ ...filters, maxBerat: txt })}
+            />
+          </View>
 
-          <TextInput
-            placeholder="Minimum"
-            placeholderTextColor="#999"
-            style={styles.input}
-          />
-
-          <TextInput
-            placeholder="Maximum"
-            placeholderTextColor="#999"
-            style={styles.input}
-          />
+          {/* BUTTON TERAPKAN */}
+          <TouchableOpacity style={styles.applyButton} onPress={onClose}>
+            <Text style={styles.applyText}>Terapkan Filter</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -81,75 +106,86 @@ export default function FilterModal({ visible, onClose }: Props) {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.2)',
+    backgroundColor: 'rgba(0,0,0,0.4)', // Sedikit lebih gelap agar fokus ke modal
     justifyContent: 'flex-end',
   },
-
   container: {
     backgroundColor: '#FFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 25,
+    paddingTop: 24,
+    paddingBottom: 10, // Ruang ekstra bawah untuk kenyamanan
   },
-
   header: {
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
+    // marginBottom: 10,
+    width: '100%',
   },
-
   title: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
+    color: '#000',
   },
-
   closeButton: {
     position: 'absolute',
     right: 0,
   },
-
   sectionTitle: {
-    marginTop: 20,
+    // marginTop: 25,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 10,
   },
-
   chipContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    marginTop: 10,
+    gap: 10,
   },
-
   chip: {
-    backgroundColor: '#E5E5E5',
-    paddingHorizontal: 14,
+    backgroundColor: '#F2F2F2',
+    paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 10,
-    marginHorizontal: 5,
-    marginBottom: 10,
+    borderRadius: 8,
   },
-
+  chipSelected: {
+    backgroundColor: '#2F343A', // Sesuaikan dengan tema app Anda
+  },
   chipText: {
     fontSize: 14,
-    color: '#333',
+    fontWeight: '600',
+    color: '#000',
   },
-
-  chipSelected: {
-    backgroundColor: '#28A745',
-  },
-
   chipTextSelected: {
     color: '#FFFFFF',
   },
-
+  inputContainer: {
+    gap: 12, // Memberikan jarak antar input vertikal
+    marginTop: 5,
+  },
   input: {
-    marginTop: 10,
     backgroundColor: '#F2F2F2',
-    borderRadius: 8,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#D6D6D6',
-    textAlign: 'center', // ini yang membuat placeholder center
+    borderRadius: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000',
+    textAlign: 'center',
+  },
+  applyButton: {
+    backgroundColor: '#2F343A',
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  applyText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

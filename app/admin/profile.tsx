@@ -1,5 +1,5 @@
-import React from 'react';
 import { useRouter } from 'expo-router';
+import React from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -36,7 +36,10 @@ export default function ProfileScreen() {
           {/* Card Menu */}
           <View style={styles.card}>
             {/* Akun */}
-            <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/customer/account-details')}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push('/customer/account-details')}
+            >
               <Text style={styles.icon}>👤</Text>
               <Text style={styles.menuText}>Akun</Text>
             </TouchableOpacity>
@@ -44,7 +47,10 @@ export default function ProfileScreen() {
             <View style={styles.divider} />
 
             {/* Logout */}
-            <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/')}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push('/')}
+            >
               <Text style={styles.logoutIcon}>↩</Text>
               <Text style={styles.logoutText}>Log out</Text>
             </TouchableOpacity>

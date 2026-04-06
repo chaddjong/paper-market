@@ -22,7 +22,7 @@ export default function Header() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => router.push('/customer/notifications')}
+          onPress={() => router.push('/customer/notification')}
         >
           <NotificationIcon width={22} height={22} />
         </TouchableOpacity>
