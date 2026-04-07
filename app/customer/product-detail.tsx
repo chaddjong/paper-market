@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   bottomAction: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 30,
+    marginBottom: 50,
   },
 
   whatsappButton: {

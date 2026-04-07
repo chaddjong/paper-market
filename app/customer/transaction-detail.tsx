@@ -1,6 +1,14 @@
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Alert } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../config/supabase';
 
@@ -22,18 +30,20 @@ export default function TransactionDetailScreen() {
     try {
       const { data, error } = await supabase
         .from('transactions')
-        .select(`
+        .select(
+          `
           *,
           posts (jenis_kertas),
           buyer:buyer_id (nama)
-        `)
+        `,
+        )
         .eq('id', id)
         .single();
 
       if (error) throw error;
       setDetail(data);
     } catch (error: any) {
-      Alert.alert("Error", error.message);
+      Alert.alert('Error', error.message);
     } finally {
       setLoading(false);
     }
@@ -42,17 +52,53 @@ export default function TransactionDetailScreen() {
   const handleMarkAsSold = async () => {
     setUpdating(true);
     try {
-      const { error } = await supabase
+      // 1. Update status transaksi menjadi verified
+      const { error: updateError } = await supabase
         .from('transactions')
         .update({ status: 'verified' })
         .eq('id', id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
-      Alert.alert("Sukses", "Transaksi telah diverifikasi!");
-      router.back(); // Kembali ke notifikasi
+      // 2. Ambil detail postingan (terutama image_url) sebelum dihapus
+      // Kita perlu query ulang atau pastikan select di fetchTransactionDetail sudah lengkap
+      const { data: postData, error: postFetchError } = await supabase
+        .from('posts')
+        .select('id, image_url')
+        .eq('id', detail.post_id)
+        .single();
+
+      if (!postFetchError && postData) {
+        // 3. Hapus Gambar di Storage
+        const imageUrl = postData.image_url;
+        if (imageUrl) {
+          const filePath = imageUrl.split('post-images/')[1]; // Ambil path relatif
+          if (filePath) {
+            const { error: storageError } = await supabase.storage
+              .from('post-images')
+              .remove([filePath]);
+
+            if (storageError)
+              console.error('Gagal hapus storage:', storageError.message);
+          }
+        }
+
+        // 4. Hapus Postingan dari tabel posts
+        const { error: deletePostError } = await supabase
+          .from('posts')
+          .delete()
+          .eq('id', postData.id);
+
+        if (deletePostError) throw deletePostError;
+      }
+
+      Alert.alert(
+        'Sukses',
+        'Transaksi diverifikasi dan postingan telah dihapus!',
+      );
+      router.back();
     } catch (error: any) {
-      Alert.alert("Gagal", error.message);
+      Alert.alert('Gagal', error.message);
     } finally {
       setUpdating(false);
     }
@@ -72,7 +118,9 @@ export default function TransactionDetailScreen() {
         </View>
 
         <View style={styles.content}>
-          <Text style={styles.mainTitle}>Dibayar oleh {detail?.buyer?.nama}</Text>
+          <Text style={styles.mainTitle}>
+            Dibayar oleh {detail?.buyer?.nama}
+          </Text>
 
           <View style={styles.imageWrapper}>
             <Text style={styles.sectionTitle}>Bukti Pembayaran</Text>
@@ -87,7 +135,9 @@ export default function TransactionDetailScreen() {
 
           <View style={styles.priceSection}>
             <Text style={styles.label}>Harga</Text>
-            <Text style={styles.finalPrice}>Rp {detail?.total_price?.toLocaleString('id-ID')}</Text>
+            <Text style={styles.finalPrice}>
+              Rp {detail?.total_price?.toLocaleString('id-ID')}
+            </Text>
           </View>
 
           <View style={styles.alertBox}>
@@ -99,12 +149,16 @@ export default function TransactionDetailScreen() {
         </View>
 
         <View style={styles.bottom}>
-          <TouchableOpacity 
-            style={[styles.button, updating && { opacity: 0.7 }]} 
+          <TouchableOpacity
+            style={[styles.button, updating && { opacity: 0.7 }]}
             onPress={handleMarkAsSold}
             disabled={updating}
           >
-            {updating ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Tandai sebagai terjual</Text>}
+            {updating ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Tandai sebagai terjual</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -222,7 +276,7 @@ const styles = StyleSheet.create({
   bottom: {
     padding: 16,
     backgroundColor: '#ffffff',
-    marginBottom: 30,
+    marginBottom: 50,
     marginHorizontal: 50,
   },
 

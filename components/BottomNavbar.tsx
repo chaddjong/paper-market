@@ -1,7 +1,13 @@
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react'; // Tambah useState & useEffect
+import {
+  Keyboard,
+  Platform,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from 'react-native'; // Tambah Keyboard
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeIcon from '../assets/icons/home-2.svg';
@@ -13,9 +19,29 @@ export default function BottomNavbar() {
   const { role } = useAuth();
   const insets = useSafeAreaInsets();
 
-  // fallback biar tidak error
-  const basePath = role === 'admin' ? '/admin' : '/customer';
+  // State untuk deteksi keyboard
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
 
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      () => setKeyboardVisible(true),
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => setKeyboardVisible(false),
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
+
+  // Jika keyboard muncul di Android, sembunyikan navbar
+  if (Platform.OS === 'android' && isKeyboardVisible) return null;
+
+  const basePath = role === 'admin' ? '/admin' : '/customer';
   const routes = {
     home: `${basePath}/homepage` as const,
     market: `${basePath}/marketplace` as const,
@@ -26,8 +52,12 @@ export default function BottomNavbar() {
     <View
       style={[
         styles.container,
-        // 3. Tambahkan paddingBottom dinamis
-        { paddingBottom: insets.bottom > 0 ? insets.bottom - 45 : 20 },
+        {
+          // Gunakan padding bottom yang bersih
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 20,
+          // Jika keyboard muncul (khusus iOS), kita buat dia menempel
+          bottom: 0,
+        },
       ]}
     >
       <TouchableOpacity onPress={() => router.push(routes.home)}>
@@ -47,6 +77,8 @@ export default function BottomNavbar() {
 
 const styles = StyleSheet.create({
   container: {
+    // Gunakan posisi relatif atau hilangkan absolute jika dibungkus View di Homepage
+    // Namun jika tetap absolute, pastikan bottom: 0
     position: 'absolute',
     bottom: 0,
     left: 0,
@@ -57,5 +89,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingTop: 20,
+    // Tambahkan elevation agar tidak terlihat transparan saat menumpuk
+    // elevation: 8,
   },
 });

@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    marginBottom: 20,
+    marginBottom: 50,
   },
 
   deleteButton: {

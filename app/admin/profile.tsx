@@ -21,66 +21,65 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
 
   return (
-    <SafeAreaView
-      style={styles.safeArea}
-      edges={['top', 'bottom', 'left', 'right']}
-    >
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          contentContainerStyle={[
-            styles.scrollContainer,
-            { paddingBottom: 100 + insets.bottom },
-          ]}
-          keyboardShouldPersistTaps="handled"
+    // Mengatur edges hanya ke top agar area bawah dikelola oleh BottomNavbar
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <View style={styles.flex}>
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Profile</Text>
-          </View>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[
+              styles.scrollContainer,
+              { paddingBottom: 100 + insets.bottom },
+            ]}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Header */}
+            <View style={styles.header}>
+              <Text style={styles.title}>Profile Admin</Text>
+            </View>
 
-          <View style={styles.headerDivider} />
+            <View style={styles.headerDivider} />
 
-          {/* Card Menu */}
-          <View style={styles.card}>
-            {/* Akun */}
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => router.push('/customer/account-details')}
-            >
-              <Text style={styles.icon}>👤</Text>
-              <Text style={styles.menuText}>Akun</Text>
-            </TouchableOpacity>
+            {/* Card Menu */}
+            <View style={styles.card}>
+              {/* Akun - Navigasi disesuaikan ke detail akun admin */}
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => router.push('/customer/account-details')}
+              >
+                <Text style={styles.icon}>👤</Text>
+                <Text style={styles.menuText}>Akun Admin</Text>
+              </TouchableOpacity>
 
-            <View style={styles.divider} />
+              <View style={styles.divider} />
 
-            {/* Logout */}
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => router.push('/')}
-            >
-              <Text style={styles.logoutIcon}>↩</Text>
-              <Text style={styles.logoutText}>Log out</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
+              {/* Logout */}
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => router.push('/')}
+              >
+                <Text style={styles.logoutIcon}>↩</Text>
+                <Text style={styles.logoutText}>Log out</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
 
-        <View
-          style={{
-            backgroundColor: '#ffffff',
-            paddingBottom: insets.bottom + 10,
-          }}
-        >
-          <BottomNavbar />
-        </View>
-      </KeyboardAvoidingView>
+        {/* Bottom Navbar diposisikan secara absolut di dalam komponennya */}
+        <BottomNavbar />
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
+
   safeArea: {
     flex: 1,
     backgroundColor: '#ffffff',
@@ -91,7 +90,7 @@ const styles = StyleSheet.create({
   },
 
   scrollContainer: {
-    paddingBottom: 120,
+    paddingTop: 10,
   },
 
   header: {

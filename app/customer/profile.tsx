@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-// 1. Import useSafeAreaInsets
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -19,73 +18,68 @@ import BottomNavbar from '../../components/BottomNavbar';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  // 2. Inisialisasi insets
   const insets = useSafeAreaInsets();
 
   return (
-    // Tambahkan 'bottom' pada edges agar SafeAreaView menghitung area bawah
-    <SafeAreaView
-      style={styles.safeArea}
-      edges={['top', 'bottom', 'left', 'right']}
-    >
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          // Gunakan padding bottom dinamis agar menu terakhir tidak tertutup navbar
-          contentContainerStyle={[
-            styles.scrollContainer,
-            { paddingBottom: 100 + insets.bottom },
-          ]}
-          keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      {/* Menggunakan View style flex agar BottomNavbar tetap menempel di bawah secara absolut */}
+      <View style={styles.flex}>
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Profile</Text>
-          </View>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[
+              styles.scrollContainer,
+              { paddingBottom: 100 + insets.bottom },
+            ]}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Header */}
+            <View style={styles.header}>
+              <Text style={styles.title}>Profile</Text>
+            </View>
 
-          <View style={styles.headerDivider} />
+            <View style={styles.headerDivider} />
 
-          {/* Card Menu */}
-          <View style={styles.card}>
-            {/* Akun */}
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => router.push('/customer/account-details')}
-            >
-              <Text style={styles.icon}>👤</Text>
-              <Text style={styles.menuText}>Akun</Text>
-            </TouchableOpacity>
+            {/* Card Menu */}
+            <View style={styles.card}>
+              {/* Akun */}
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => router.push('/customer/account-details')}
+              >
+                <Text style={styles.icon}>👤</Text>
+                <Text style={styles.menuText}>Akun</Text>
+              </TouchableOpacity>
 
-            <View style={styles.divider} />
+              <View style={styles.divider} />
 
-            {/* Logout */}
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => router.push('/')}
-            >
-              <Text style={styles.logoutIcon}>↩</Text>
-              <Text style={styles.logoutText}>Log out</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
+              {/* Logout */}
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => router.push('/')}
+              >
+                <Text style={styles.logoutIcon}>↩</Text>
+                <Text style={styles.logoutText}>Log out</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
 
-        {/* 3. Bungkus BottomNavbar agar memiliki jarak aman dari bilah navigasi HP */}
-        <View
-          style={{
-            backgroundColor: '#ffffff',
-            paddingBottom: insets.bottom + 10,
-          }}
-        >
-          <BottomNavbar />
-        </View>
-      </KeyboardAvoidingView>
+        {/* Bottom Navbar diletakkan langsung tanpa pembungkus padding tambahan */}
+        <BottomNavbar />
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
+  
   safeArea: {
     flex: 1,
     backgroundColor: '#ffffff',
@@ -96,7 +90,6 @@ const styles = StyleSheet.create({
   },
 
   scrollContainer: {
-    // paddingBottom sudah diatur secara dinamis di inline style
     paddingTop: 10,
   },
 

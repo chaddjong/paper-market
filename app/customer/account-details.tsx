@@ -1,6 +1,7 @@
-import { useRouter } from 'expo-router'; // Tambahkan router untuk fungsi back
-import React from 'react';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -16,92 +17,114 @@ import {
 } from 'react-native-safe-area-context';
 import BackIcon from '../../assets/icons/arrow-left.svg';
 import BottomNavbar from '../../components/BottomNavbar';
+import { supabase } from '../../config/supabase';
+import { useAuth } from '../../context/AuthContext';
 
 export default function AccountDetailsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { user } = useAuth(); // Ambil user dari context
+
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      setLoading(true);
+      // Ambil data dari tabel users berdasarkan ID user yang sedang login
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user?.id)
+        .single();
+
+      if (error) throw error;
+      setProfile(data);
+    } catch (error: any) {
+      console.error('Error fetching profile:', error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    // Tambahkan 'bottom' pada edges
-    <SafeAreaView
-      style={styles.safeArea}
-      edges={['top', 'bottom', 'left', 'right']}
-    >
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          // Padding bottom dinamis mengikuti insets
-          contentContainerStyle={[
-            styles.scrollContainer,
-            { paddingBottom: 100 + insets.bottom },
-          ]}
-          keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <View style={styles.flex}>
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()}>
-              <BackIcon width={22} height={22} />
-            </TouchableOpacity>
-
-            <Text style={styles.headerTitle}>Akun</Text>
-          </View>
-
-          <View style={styles.headerDivider} />
-
-          {/* Form */}
-          <View style={styles.formContainer}>
-            {/* Nama */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Nama</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Gabriel"
-                placeholderTextColor="#9E9E9E"
-              />
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[
+              styles.scrollContainer,
+              { paddingBottom: 100 + insets.bottom },
+            ]}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Header */}
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => router.back()}>
+                <BackIcon width={22} height={22} />
+              </TouchableOpacity>
+              <Text style={styles.headerTitle}>Akun</Text>
             </View>
 
-            {/* Email */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="gabriel78@gmail.com"
-                placeholderTextColor="#9E9E9E"
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
+            <View style={styles.headerDivider} />
 
-            {/* Whatsapp */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Nomor Whatsapp</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="081551515678"
-                placeholderTextColor="#9E9E9E"
-                keyboardType="phone-pad"
-              />
-            </View>
-          </View>
-        </ScrollView>
+            {loading ? (
+              <ActivityIndicator color="#2F343A" style={{ marginTop: 50 }} />
+            ) : (
+              <View style={styles.formContainer}>
+                {/* Nama */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Nama</Text>
+                  <TextInput
+                    style={[styles.input, styles.disabledInput]}
+                    value={profile?.nama || '-'}
+                    editable={false} // Mengunci input
+                  />
+                </View>
 
-        {/* Wrapper BottomNavbar dengan padding insets bottom */}
-        <View
-          style={{
-            backgroundColor: '#ffffff',
-            paddingBottom: insets.bottom + 10,
-          }}
-        >
-          <BottomNavbar />
-        </View>
-      </KeyboardAvoidingView>
+                {/* Email */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Email</Text>
+                  <TextInput
+                    style={[styles.input, styles.disabledInput]}
+                    value={profile?.email || '-'}
+                    editable={false} // Mengunci input
+                  />
+                </View>
+
+                {/* Whatsapp */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Nomor Whatsapp</Text>
+                  <TextInput
+                    style={[styles.input, styles.disabledInput]}
+                    value={profile?.phone || '-'}
+                    editable={false} // Mengunci input
+                  />
+                </View>
+              </View>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
+
+        {/* Bottom Navbar diposisikan secara absolut (diatur di dalam komponennya) */}
+        <BottomNavbar />
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   safeArea: {
     flex: 1,
     backgroundColor: '#ffffff',
@@ -110,7 +133,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContainer: {
-    // paddingBottom sudah diatur secara dinamis di inline style
     paddingTop: 10,
   },
   header: {
@@ -149,5 +171,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#D0D0D0',
     color: '#000',
+  },
+  disabledInput: {
+    backgroundColor: '#F5F5F5', // Memberikan visual bahwa input terkunci
+    color: '#7A7A7A',
   },
 });

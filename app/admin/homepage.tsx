@@ -72,97 +72,95 @@ export default function Homepage() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <View style={styles.container}>
-          <Header />
+    // Gunakan edges top saja karena bagian bawah ditangani oleh BottomNavbar secara absolut
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <View style={styles.flex}>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={styles.container}>
+            <Header />
 
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={[
-              styles.scrollContent,
-              { paddingBottom: 50 },
-            ]}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
-          >
-            {/* SECTION INFORMASI */}
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Informasi</Text>
-              <TouchableOpacity
-                onPress={() => router.push('/admin/create-information')}
-              >
-                <PlusIcon width={18} height={18} />
-              </TouchableOpacity>
-            </View>
-
-            {loading && !refreshing ? (
-              <ActivityIndicator
-                color="#2F343A"
-                style={{ marginVertical: 20 }}
-              />
-            ) : (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.infoScroll}
-              >
-                {infoData.map((item) => (
-                  <AdminInfoCard
-                    key={item.id}
-                    data={{
-                      id: item.id,
-                      title: item.title,
-                      price: `Rp. ${item.price.toLocaleString()}`,
-                      image: item.image_url,
-                      condition: item.condition,
-                    }}
-                  />
-                ))}
-              </ScrollView>
-            )}
-
-            {/* SECTION MARKET */}
-            <Text style={styles.sectionTitle}>Market</Text>
-
-            {loading && !refreshing ? (
-              <ActivityIndicator
-                color="#2F343A"
-                style={{ marginVertical: 20 }}
-              />
-            ) : (
-              <View style={styles.marketGrid}>
-                {marketData.map((item) => (
-                  <AdminMarketCard
-                    key={item.id}
-                    data={{
-                      id: item.id,
-                      title: item.jenis_kertas,
-                      image: item.image_url,
-                      time: new Date(item.created_at).toLocaleDateString(
-                        'id-ID',
-                      ),
-                      condition: item.kondisi_kertas,
-                      location: item.alamat,
-                      weight: `${item.berat_kg} Kg`,
-                    }}
-                  />
-                ))}
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={[
+                styles.scrollContent,
+                { paddingBottom: 100 + insets.bottom }, // Jarak aman agar konten terakhir tidak tertutup navbar
+              ]}
+              refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+              }
+            >
+              {/* SECTION INFORMASI */}
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Informasi</Text>
+                <TouchableOpacity
+                  onPress={() => router.push('/admin/create-information')}
+                >
+                  <PlusIcon width={18} height={18} />
+                </TouchableOpacity>
               </View>
-            )}
-          </ScrollView>
-        </View>
-      </KeyboardAvoidingView>
-      <View
-        style={{
-          backgroundColor: '#ffffff',
-          paddingBottom: insets.bottom + 10,
-        }}
-      >
+
+              {loading && !refreshing ? (
+                <ActivityIndicator
+                  color="#2F343A"
+                  style={{ marginVertical: 20 }}
+                />
+              ) : (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.infoScroll}
+                >
+                  {infoData.map((item) => (
+                    <AdminInfoCard
+                      key={item.id}
+                      data={{
+                        id: item.id,
+                        title: item.title,
+                        price: `Rp. ${item.price.toLocaleString()}`,
+                        image: item.image_url,
+                        condition: item.condition,
+                      }}
+                    />
+                  ))}
+                </ScrollView>
+              )}
+
+              {/* SECTION MARKET */}
+              <Text style={styles.sectionTitle}>Market</Text>
+
+              {loading && !refreshing ? (
+                <ActivityIndicator
+                  color="#2F343A"
+                  style={{ marginVertical: 20 }}
+                />
+              ) : (
+                <View style={styles.marketGrid}>
+                  {marketData.map((item) => (
+                    <AdminMarketCard
+                      key={item.id}
+                      data={{
+                        id: item.id,
+                        title: item.jenis_kertas,
+                        image: item.image_url,
+                        time: new Date(item.created_at).toLocaleDateString(
+                          'id-ID',
+                        ),
+                        condition: item.kondisi_kertas,
+                        location: item.alamat,
+                        weight: `${item.berat_kg} Kg`,
+                      }}
+                    />
+                  ))}
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+
+        {/* Letakkan BottomNavbar di sini agar melayang (absolute) di atas flex view */}
         <BottomNavbar />
       </View>
     </SafeAreaView>
@@ -186,7 +184,7 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
-    paddingBottom: 120,
+    paddingTop: 10,
   },
 
   sectionTitle: {

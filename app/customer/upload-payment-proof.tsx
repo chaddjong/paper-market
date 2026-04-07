@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
 
   bottomContainer: {
     marginTop: 'auto',
-    marginBottom: 30,
+    marginBottom: 50,
     marginHorizontal: 50,
   },
 

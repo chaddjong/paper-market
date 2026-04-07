@@ -56,20 +56,33 @@ const styles = StyleSheet.create({
 
   buttonContainer: {
     flexDirection: 'row',
+    // Memberikan paddingHorizontal agar container tidak mentok ke pinggir layar
+    paddingHorizontal: 40,
     gap: 20,
-    marginBottom: 180,
+    marginBottom: 100, // Sedikit disesuaikan agar tidak terlalu tinggi
   },
 
   button: {
+    // KUNCI UTAMA: flex 1 membuat tombol membagi ruang secara merata
+    flex: 1,
     backgroundColor: '#2F343A',
-    paddingVertical: 15,
-    paddingHorizontal: 35,
+    paddingVertical: 18, // Sedikit lebih tebal agar terlihat premium
     borderRadius: 16,
+    // Kita hapus paddingHorizontal karena lebarnya sudah diatur oleh flex
+    justifyContent: 'center',
+    alignItems: 'center',
+    // Elevation untuk Android agar terlihat sedikit timbul
+    elevation: 4,
+    // Shadow untuk iOS
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
 
   buttonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600', // Diubah ke 600 agar lebih tegas
   },
 });

@@ -1,8 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -12,7 +10,8 @@ import {
   View,
 } from 'react-native';
 
-// Import useSafeAreaInsets
+import { useRouter } from 'expo-router';
+
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -29,11 +28,14 @@ import FilterIcon from '../../assets/icons/filter.svg';
 import SearchIcon from '../../assets/icons/search.svg';
 
 export default function Marketplace() {
-  const insets = useSafeAreaInsets(); // Inisialisasi insets
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [marketData, setMarketData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
+
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [filters, setFilters] = useState({
     jenisKertas: null as string | null,
@@ -45,6 +47,10 @@ export default function Marketplace() {
     try {
       setLoading(true);
       let query = supabase.from('posts').select('*');
+
+      if (searchQuery) {
+        query = query.ilike('jenis_kertas', `%${searchQuery}%`);
+      }
 
       if (filters.jenisKertas) {
         query = query.ilike('jenis_kertas', `%${filters.jenisKertas}%`);
@@ -68,7 +74,7 @@ export default function Marketplace() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filters.jenisKertas, filters.minBerat, filters.maxBerat]);
+  }, [filters.jenisKertas, filters.minBerat, filters.maxBerat, searchQuery]);
 
   useEffect(() => {
     fetchMarketData();
@@ -83,12 +89,8 @@ export default function Marketplace() {
   };
 
   return (
-    // Tambahkan edges bottom agar menghitung area navigasi
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <View style={styles.flex}>
         <View style={styles.container}>
           {/* Header Search */}
           <View style={styles.header}>
@@ -97,6 +99,8 @@ export default function Marketplace() {
                 placeholder="Cari kertas"
                 placeholderTextColor="#888"
                 style={styles.input}
+                value={searchQuery}
+                onChangeText={(text) => setSearchQuery(text)}
               />
               <SearchIcon width={18} height={18} />
             </View>
@@ -112,7 +116,7 @@ export default function Marketplace() {
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.iconButton}>
+            <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/customer/create-post')}>
               <EditIcon width={22} height={22} />
             </TouchableOpacity>
           </View>
@@ -124,7 +128,6 @@ export default function Marketplace() {
           ) : (
             <ScrollView
               showsVerticalScrollIndicator={false}
-              // Sesuaikan paddingBottom konten agar tidak tertutup navbar melayang
               contentContainerStyle={[
                 styles.scrollContent,
                 { paddingBottom: 100 + insets.bottom },
@@ -161,22 +164,15 @@ export default function Marketplace() {
           )}
         </View>
 
+        {/* Taruh BottomNavbar langsung di sini tanpa pembungkus View paddingBottom */}
+        <BottomNavbar />
+
         <FilterModal
           visible={showFilter}
           onClose={() => setShowFilter(false)}
           filters={filters}
           setFilters={setFilters}
         />
-      </KeyboardAvoidingView>
-
-      {/* Bungkus BottomNavbar agar tidak tertutup bilah navigasi HP */}
-      <View
-        style={{
-          backgroundColor: '#ffffff',
-          paddingBottom: insets.bottom + 10,
-        }}
-      >
-        <BottomNavbar />
       </View>
     </SafeAreaView>
   );
@@ -184,7 +180,7 @@ export default function Marketplace() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  safeArea: { flex: 1, backgroundColor: '#ffffff' }, // Samakan dengan Homepage
+  safeArea: { flex: 1, backgroundColor: '#ffffff' },
   container: { flex: 1, backgroundColor: '#ffffff', paddingHorizontal: 16 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
@@ -206,7 +202,7 @@ const styles = StyleSheet.create({
   },
   input: { flex: 1, paddingVertical: 10, fontSize: 14 },
   iconButton: { marginLeft: 6 },
-  scrollContent: { paddingTop: 10 }, // paddingBottom dipindah ke inline style
+  scrollContent: { paddingTop: 10 },
   marketGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

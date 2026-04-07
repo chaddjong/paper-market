@@ -12,6 +12,8 @@ import {
   View,
 } from 'react-native';
 
+import { useRouter } from 'expo-router';
+
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -22,19 +24,20 @@ import FilterModal from '@/components/FilterModal';
 import BottomNavbar from '../../components/BottomNavbar';
 import MarketCard from '../admin/components/AdminMarketCard';
 
+import EditIcon from '../../assets/icons/edit.svg';
 import FilterAppliedIcon from '../../assets/icons/filter-applied.svg';
 import FilterIcon from '../../assets/icons/filter.svg';
-
-import EditIcon from '../../assets/icons/edit.svg';
-
 import SearchIcon from '../../assets/icons/search.svg';
 
 export default function Marketplace() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const [marketData, setMarketData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
+
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [filters, setFilters] = useState({
     jenisKertas: null as string | null,
@@ -42,11 +45,14 @@ export default function Marketplace() {
     maxBerat: '',
   });
 
-  // Fungsi Fetch Data
   const fetchMarketData = useCallback(async () => {
     try {
       setLoading(true);
       let query = supabase.from('posts').select('*');
+
+      if (searchQuery) {
+        query = query.ilike('jenis_kertas', `%${searchQuery}%`);
+      }
 
       if (filters.jenisKertas) {
         query = query.ilike('jenis_kertas', `%${filters.jenisKertas}%`);
@@ -70,7 +76,7 @@ export default function Marketplace() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filters.jenisKertas, filters.minBerat, filters.maxBerat]);
+  }, [filters.jenisKertas, filters.minBerat, filters.maxBerat, searchQuery]);
 
   useEffect(() => {
     fetchMarketData();
@@ -85,81 +91,91 @@ export default function Marketplace() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <View style={styles.container}>
-          {/* Header Search */}
-          <View style={styles.header}>
-            <View style={styles.searchBox}>
-              <TextInput
-                placeholder="Cari kertas"
-                placeholderTextColor="#888"
-                style={styles.input}
-              />
-              <SearchIcon width={18} height={18} />
-            </View>
-
-            <TouchableOpacity
-              style={styles.iconButton}
-              onPress={() => setShowFilter(true)}
-            >
-              {isFilterApplied ? (
-                <FilterAppliedIcon width={22} height={22} />
-              ) : (
-                <FilterIcon width={22} height={22} />
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.iconButton}>
-              <EditIcon width={22} height={22} />
-            </TouchableOpacity>
-          </View>
-
-          {loading ? (
-            <View style={styles.center}>
-              <ActivityIndicator size="large" color="#2F343A" />
-            </View>
-          ) : (
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={[
-                styles.scrollContent,
-                { paddingBottom: 100 + insets.bottom },
-              ]}
-              refreshControl={
-                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-              }
-            >
-              <View style={styles.marketGrid}>
-                {marketData.length > 0 ? (
-                  marketData.map((item) => (
-                    <MarketCard
-                      key={item.id}
-                      data={{
-                        id: item.id,
-                        title: item.jenis_kertas,
-                        image: item.image_url,
-                        time: new Date(item.created_at).toLocaleDateString(
-                          'id-ID',
-                        ),
-                        condition: item.kondisi_kertas,
-                        location: item.alamat,
-                        weight: `${item.berat_kg} Kg`,
-                      }}
-                    />
-                  ))
-                ) : (
-                  <Text style={styles.emptyText}>
-                    Tidak ada barang di marketplace.
-                  </Text>
-                )}
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <View style={styles.flex}>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={styles.container}>
+            {/* Header Search */}
+            <View style={styles.header}>
+              <View style={styles.searchBox}>
+                <TextInput
+                  placeholder="Cari kertas"
+                  placeholderTextColor="#888"
+                  style={styles.input}
+                  value={searchQuery}
+                  onChangeText={(text) => setSearchQuery(text)}
+                />
+                <SearchIcon width={18} height={18} />
               </View>
-            </ScrollView>
-          )}
-        </View>
+
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={() => setShowFilter(true)}
+              >
+                {isFilterApplied ? (
+                  <FilterAppliedIcon width={22} height={22} />
+                ) : (
+                  <FilterIcon width={22} height={22} />
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/customer/create-post')}>
+                <EditIcon width={22} height={22} />
+              </TouchableOpacity>
+            </View>
+
+            {loading ? (
+              <View style={styles.center}>
+                <ActivityIndicator size="large" color="#2F343A" />
+              </View>
+            ) : (
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={[
+                  styles.scrollContent,
+                  { paddingBottom: 100 + insets.bottom },
+                ]}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                  />
+                }
+              >
+                <View style={styles.marketGrid}>
+                  {marketData.length > 0 ? (
+                    marketData.map((item) => (
+                      <MarketCard
+                        key={item.id}
+                        data={{
+                          id: item.id,
+                          title: item.jenis_kertas,
+                          image: item.image_url,
+                          time: new Date(item.created_at).toLocaleDateString(
+                            'id-ID',
+                          ),
+                          condition: item.kondisi_kertas,
+                          location: item.alamat,
+                          weight: `${item.berat_kg} Kg`,
+                        }}
+                      />
+                    ))
+                  ) : (
+                    <Text style={styles.emptyText}>
+                      Tidak ada barang di marketplace.
+                    </Text>
+                  )}
+                </View>
+              </ScrollView>
+            )}
+          </View>
+        </KeyboardAvoidingView>
+
+        {/* BottomNavbar diletakkan secara independen di dalam View flex */}
+        <BottomNavbar />
 
         <FilterModal
           visible={showFilter}
@@ -167,14 +183,6 @@ export default function Marketplace() {
           filters={filters}
           setFilters={setFilters}
         />
-      </KeyboardAvoidingView>
-      <View
-        style={{
-          backgroundColor: '#ffffff',
-          paddingBottom: insets.bottom + 10,
-        }}
-      >
-        <BottomNavbar />
       </View>
     </SafeAreaView>
   );
@@ -228,7 +236,6 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
-    paddingBottom: 120,
     paddingTop: 10,
   },
 

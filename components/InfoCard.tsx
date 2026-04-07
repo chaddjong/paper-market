@@ -2,9 +2,12 @@ import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
 export default function InfoCard({ data }: any) {
+  const imageSource =
+    typeof data.image === 'string' ? { uri: data.image } : data.image;
+
   return (
     <View style={styles.card}>
-      <Image source={data.image} style={styles.image} />
+      <Image source={imageSource} style={styles.image} />
 
       <Text style={styles.title}>{data.title}</Text>
 
@@ -14,6 +17,8 @@ export default function InfoCard({ data }: any) {
 
       <Text style={styles.desc}>Kualitas kertas :</Text>
 
+      {/* Jika data.condition ada di DB, kita bisa buat dinamis, 
+          tapi jika statis sesuai desain awal tetap seperti ini: */}
       <Text style={styles.bullet}>• Bagus</Text>
       <Text style={styles.bullet}>• Rusak</Text>
       <Text style={styles.bulletSmall}>
