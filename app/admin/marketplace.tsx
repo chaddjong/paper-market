@@ -12,7 +12,10 @@ import {
   View,
 } from 'react-native';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import { supabase } from '../../config/supabase';
 
 import FilterModal from '@/components/FilterModal';
@@ -27,6 +30,7 @@ import EditIcon from '../../assets/icons/edit.svg';
 import SearchIcon from '../../assets/icons/search.svg';
 
 export default function Marketplace() {
+  const insets = useSafeAreaInsets();
   const [marketData, setMarketData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -81,7 +85,7 @@ export default function Marketplace() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -121,7 +125,10 @@ export default function Marketplace() {
           ) : (
             <ScrollView
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.scrollContent}
+              contentContainerStyle={[
+                styles.scrollContent,
+                { paddingBottom: 100 + insets.bottom },
+              ]}
               refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
               }
@@ -161,7 +168,14 @@ export default function Marketplace() {
           setFilters={setFilters}
         />
       </KeyboardAvoidingView>
-      <BottomNavbar />
+      <View
+        style={{
+          backgroundColor: '#ffffff',
+          paddingBottom: insets.bottom + 10,
+        }}
+      >
+        <BottomNavbar />
+      </View>
     </SafeAreaView>
   );
 }
@@ -173,7 +187,7 @@ const styles = StyleSheet.create({
 
   safeArea: {
     flex: 1,
-    backgroundColor: '#E9E9E9',
+    backgroundColor: '#ffffff',
   },
 
   container: {

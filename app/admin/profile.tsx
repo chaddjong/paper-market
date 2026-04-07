@@ -9,21 +9,31 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 import BottomNavbar from '../../components/BottomNavbar';
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+    <SafeAreaView
+      style={styles.safeArea}
+      edges={['top', 'bottom', 'left', 'right']}
+    >
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContainer}
+          contentContainerStyle={[
+            styles.scrollContainer,
+            { paddingBottom: 100 + insets.bottom },
+          ]}
           keyboardShouldPersistTaps="handled"
         >
           {/* Header */}
@@ -57,8 +67,14 @@ export default function ProfileScreen() {
           </View>
         </ScrollView>
 
-        {/* Bottom Navbar Fixed */}
-        <BottomNavbar />
+        <View
+          style={{
+            backgroundColor: '#ffffff',
+            paddingBottom: insets.bottom + 10,
+          }}
+        >
+          <BottomNavbar />
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

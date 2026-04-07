@@ -10,7 +10,10 @@ import {
   View,
 } from 'react-native';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import { supabase } from '../../config/supabase';
 
 import BottomNavbar from '../../components/BottomNavbar';
@@ -19,6 +22,7 @@ import InfoCard from '../../components/InfoCard';
 import MarketCard from '../../components/MarketCard';
 
 export default function Homepage() {
+  const insets = useSafeAreaInsets();
   const infoData = [
     {
       title: 'Kertas HVS',
@@ -70,7 +74,8 @@ export default function Homepage() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    // Ubah edges menjadi ['top', 'bottom'] agar menjaga area navigasi bawah
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -80,7 +85,11 @@ export default function Homepage() {
 
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
+            // Tambahkan padding bottom dinamis agar konten terakhir tidak tertutup Navbar
+            contentContainerStyle={[
+              styles.scrollContent,
+              { paddingBottom: 50 },
+            ]}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
@@ -106,30 +115,34 @@ export default function Homepage() {
               />
             ) : (
               <View style={styles.marketGrid}>
-                {marketPosts.length > 0 ? (
-                  marketPosts.map((item) => (
-                    <MarketCard
-                      key={item.id}
-                      data={{
-                        id: item.id,
-                        title: item.jenis_kertas,
-                        image: item.image_url, // URL dari Supabase Storage
-                        time: new Date(item.created_at).toLocaleDateString(), // Sederhanakan waktu
-                        condition: item.kondisi_kertas,
-                        location: item.alamat,
-                        weight: `${item.berat_kg} Kg`,
-                      }}
-                    />
-                  ))
-                ) : (
-                  <Text style={styles.emptyText}>Belum ada postingan.</Text>
-                )}
+                {marketPosts.map((item) => (
+                  <MarketCard
+                    key={item.id}
+                    data={{
+                      id: item.id,
+                      title: item.jenis_kertas,
+                      image: item.image_url,
+                      time: new Date(item.created_at).toLocaleDateString(),
+                      condition: item.kondisi_kertas,
+                      location: item.alamat,
+                      weight: `${item.berat_kg} Kg`,
+                    }}
+                  />
+                ))}
               </View>
             )}
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
-      <BottomNavbar />
+
+      {/* Bungkus BottomNavbar dengan View yang memiliki padding bottom 
+        sesuai tinggi bilah navigasi HP 
+      */}
+      <View
+        style={{ backgroundColor: '#ffffff', paddingBottom: insets.bottom + 10 }}
+      >
+        <BottomNavbar />
+      </View>
     </SafeAreaView>
   );
 }
@@ -150,8 +163,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
 
-  scrollContent: {
-    paddingBottom: 120,
+  scrollContent: { 
+    paddingTop: 10,
+    // paddingBottom dipindah ke inline style agar dinamis
   },
 
   sectionTitle: {

@@ -12,21 +12,24 @@ import {
   View,
 } from 'react-native';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+// Import useSafeAreaInsets
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import { supabase } from '../../config/supabase';
 
 import FilterModal from '@/components/FilterModal';
 import BottomNavbar from '../../components/BottomNavbar';
 import MarketCard from '../../components/MarketCard';
 
+import EditIcon from '../../assets/icons/edit.svg';
 import FilterAppliedIcon from '../../assets/icons/filter-applied.svg';
 import FilterIcon from '../../assets/icons/filter.svg';
-
-import EditIcon from '../../assets/icons/edit.svg';
-
 import SearchIcon from '../../assets/icons/search.svg';
 
 export default function Marketplace() {
+  const insets = useSafeAreaInsets(); // Inisialisasi insets
   const [marketData, setMarketData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -38,7 +41,6 @@ export default function Marketplace() {
     maxBerat: '',
   });
 
-  // Fungsi Fetch Data
   const fetchMarketData = useCallback(async () => {
     try {
       setLoading(true);
@@ -81,7 +83,8 @@ export default function Marketplace() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    // Tambahkan edges bottom agar menghitung area navigasi
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -121,7 +124,11 @@ export default function Marketplace() {
           ) : (
             <ScrollView
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.scrollContent}
+              // Sesuaikan paddingBottom konten agar tidak tertutup navbar melayang
+              contentContainerStyle={[
+                styles.scrollContent,
+                { paddingBottom: 100 + insets.bottom },
+              ]}
               refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
               }
@@ -161,36 +168,31 @@ export default function Marketplace() {
           setFilters={setFilters}
         />
       </KeyboardAvoidingView>
-      <BottomNavbar />
+
+      {/* Bungkus BottomNavbar agar tidak tertutup bilah navigasi HP */}
+      <View
+        style={{
+          backgroundColor: '#ffffff',
+          paddingBottom: insets.bottom + 10,
+        }}
+      >
+        <BottomNavbar />
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#E9E9E9',
-  },
-
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 16,
-  },
-
+  flex: { flex: 1 },
+  safeArea: { flex: 1, backgroundColor: '#ffffff' }, // Samakan dengan Homepage
+  container: { flex: 1, backgroundColor: '#ffffff', paddingHorizontal: 16 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 10,
     marginBottom: 10,
   },
-
   searchBox: {
     flex: 1,
     flexDirection: 'row',
@@ -202,28 +204,14 @@ const styles = StyleSheet.create({
     borderColor: '#D6D6D6',
     marginRight: 10,
   },
-
-  input: {
-    flex: 1,
-    paddingVertical: 10,
-    fontSize: 14,
-  },
-
-  iconButton: {
-    marginLeft: 6,
-  },
-
-  scrollContent: {
-    paddingBottom: 120,
-    paddingTop: 10,
-  },
-
+  input: { flex: 1, paddingVertical: 10, fontSize: 14 },
+  iconButton: { marginLeft: 6 },
+  scrollContent: { paddingTop: 10 }, // paddingBottom dipindah ke inline style
   marketGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
-
   emptyText: {
     textAlign: 'center',
     marginTop: 50,

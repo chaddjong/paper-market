@@ -1,5 +1,5 @@
-import React from 'react';
 import { useRouter } from 'expo-router';
+import React from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -9,21 +9,35 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+// 1. Import useSafeAreaInsets
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 import BottomNavbar from '../../components/BottomNavbar';
 
 export default function ProfileScreen() {
   const router = useRouter();
+  // 2. Inisialisasi insets
+  const insets = useSafeAreaInsets();
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+    // Tambahkan 'bottom' pada edges agar SafeAreaView menghitung area bawah
+    <SafeAreaView
+      style={styles.safeArea}
+      edges={['top', 'bottom', 'left', 'right']}
+    >
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContainer}
+          // Gunakan padding bottom dinamis agar menu terakhir tidak tertutup navbar
+          contentContainerStyle={[
+            styles.scrollContainer,
+            { paddingBottom: 100 + insets.bottom },
+          ]}
           keyboardShouldPersistTaps="handled"
         >
           {/* Header */}
@@ -36,7 +50,10 @@ export default function ProfileScreen() {
           {/* Card Menu */}
           <View style={styles.card}>
             {/* Akun */}
-            <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/customer/account-details')}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push('/customer/account-details')}
+            >
               <Text style={styles.icon}>👤</Text>
               <Text style={styles.menuText}>Akun</Text>
             </TouchableOpacity>
@@ -44,15 +61,25 @@ export default function ProfileScreen() {
             <View style={styles.divider} />
 
             {/* Logout */}
-            <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/')}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push('/')}
+            >
               <Text style={styles.logoutIcon}>↩</Text>
               <Text style={styles.logoutText}>Log out</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
 
-        {/* Bottom Navbar Fixed */}
-        <BottomNavbar />
+        {/* 3. Bungkus BottomNavbar agar memiliki jarak aman dari bilah navigasi HP */}
+        <View
+          style={{
+            backgroundColor: '#ffffff',
+            paddingBottom: insets.bottom + 10,
+          }}
+        >
+          <BottomNavbar />
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -69,7 +96,8 @@ const styles = StyleSheet.create({
   },
 
   scrollContainer: {
-    paddingBottom: 120,
+    // paddingBottom sudah diatur secara dinamis di inline style
+    paddingTop: 10,
   },
 
   header: {

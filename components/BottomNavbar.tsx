@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeIcon from '../assets/icons/home-2.svg';
 import ProfileIcon from '../assets/icons/profile.svg';
 import ShopIcon from '../assets/icons/shop.svg';
@@ -10,6 +11,7 @@ import ShopIcon from '../assets/icons/shop.svg';
 export default function BottomNavbar() {
   const router = useRouter();
   const { role } = useAuth();
+  const insets = useSafeAreaInsets();
 
   // fallback biar tidak error
   const basePath = role === 'admin' ? '/admin' : '/customer';
@@ -21,7 +23,13 @@ export default function BottomNavbar() {
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        // 3. Tambahkan paddingBottom dinamis
+        { paddingBottom: insets.bottom > 0 ? insets.bottom - 45 : 20 },
+      ]}
+    >
       <TouchableOpacity onPress={() => router.push(routes.home)}>
         <HomeIcon width={24} height={24} />
       </TouchableOpacity>
@@ -48,6 +56,6 @@ const styles = StyleSheet.create({
     borderTopColor: '#D6D6D6',
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingVertical: 20,
+    paddingTop: 20,
   },
 });

@@ -12,7 +12,10 @@ import {
   View,
 } from 'react-native';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import { supabase } from '../../config/supabase';
 
 import BottomNavbar from '../../components/BottomNavbar';
@@ -23,6 +26,7 @@ import AdminMarketCard from '../admin/components/AdminMarketCard';
 import PlusIcon from '../../assets/icons/plus.svg';
 
 export default function Homepage() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const [infoData, setInfoData] = useState<any[]>([]);
   const [marketData, setMarketData] = useState<any[]>([]);
@@ -68,7 +72,7 @@ export default function Homepage() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -78,7 +82,10 @@ export default function Homepage() {
 
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
+            contentContainerStyle={[
+              styles.scrollContent,
+              { paddingBottom: 50 },
+            ]}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
@@ -150,7 +157,14 @@ export default function Homepage() {
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
-      <BottomNavbar />
+      <View
+        style={{
+          backgroundColor: '#ffffff',
+          paddingBottom: insets.bottom + 10,
+        }}
+      >
+        <BottomNavbar />
+      </View>
     </SafeAreaView>
   );
 }
