@@ -20,12 +20,14 @@ export default function PaymentSuccessScreen() {
 
   useEffect(() => {
     const fetchDetail = async () => {
-      const { data } = await supabase
+      // Ambil data langsung dari tabel transactions (tidak perlu join posts)
+      const { data, error } = await supabase
         .from('transactions')
-        .select('*, posts(jenis_kertas), buyer:buyer_id(nama)')
+        .select('*, buyer:buyer_id(nama)')
         .eq('id', id)
         .single();
-      setDetail(data);
+
+      if (!error) setDetail(data);
       setLoading(false);
     };
     fetchDetail();
@@ -40,7 +42,7 @@ export default function PaymentSuccessScreen() {
           <TouchableOpacity onPress={() => router.back()}>
             <BackIcon width={22} height={22} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{detail?.posts?.jenis_kertas}</Text>
+          <Text style={styles.headerTitle}>{detail?.product_name}</Text>
           <View style={{ width: 22 }} />
         </View>
 

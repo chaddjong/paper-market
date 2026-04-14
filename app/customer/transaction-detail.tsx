@@ -52,51 +52,61 @@ export default function TransactionDetailScreen() {
   const handleMarkAsSold = async () => {
     setUpdating(true);
     try {
-      // 1. Update status transaksi menjadi verified
+      // 1. Ambil data postingan (nama dan image_url) sebelum dihapus
+      const { data: postData, error: postFetchError } = await supabase
+        .from('posts')
+        .select('jenis_kertas, image_url')
+        .eq('id', detail.post_id)
+        .single();
+
+      if (postFetchError || !postData)
+        throw new Error('Data postingan asli tidak ditemukan.');
+
+      // 2. Update transaksi: Simpan nama produk secara permanen
+      // Kita set post_id ke null agar tidak melanggar relasi saat post dihapus
       const { error: updateError } = await supabase
         .from('transactions')
-        .update({ status: 'verified' })
+        .update({
+          status: 'verified',
+          product_name: postData.jenis_kertas,
+          post_id: null,
+        })
         .eq('id', id);
 
       if (updateError) throw updateError;
 
-      // 2. Ambil detail postingan (terutama image_url) sebelum dihapus
-      // Kita perlu query ulang atau pastikan select di fetchTransactionDetail sudah lengkap
-      const { data: postData, error: postFetchError } = await supabase
-        .from('posts')
-        .select('id, image_url')
-        .eq('id', detail.post_id)
-        .single();
+      // 3. HAPUS GAMBAR PRODUK DI STORAGE
+      // Kita hapus gambar produk karena barangnya sudah terjual/habis
+      const imageUrl = postData.image_url;
+      if (imageUrl) {
+        // Pastikan split berdasarkan nama folder storage kamu (misal: 'post-images')
+        const filePath = imageUrl.split('post-images/')[1];
+        if (filePath) {
+          const { error: storageError } = await supabase.storage
+            .from('post-images')
+            .remove([filePath]);
 
-      if (!postFetchError && postData) {
-        // 3. Hapus Gambar di Storage
-        const imageUrl = postData.image_url;
-        if (imageUrl) {
-          const filePath = imageUrl.split('post-images/')[1]; // Ambil path relatif
-          if (filePath) {
-            const { error: storageError } = await supabase.storage
-              .from('post-images')
-              .remove([filePath]);
-
-            if (storageError)
-              console.error('Gagal hapus storage:', storageError.message);
-          }
+          if (storageError)
+            console.error(
+              'Gagal hapus gambar produk di storage:',
+              storageError.message,
+            );
         }
-
-        // 4. Hapus Postingan dari tabel posts
-        const { error: deletePostError } = await supabase
-          .from('posts')
-          .delete()
-          .eq('id', postData.id);
-
-        if (deletePostError) throw deletePostError;
       }
+
+      // 4. Hapus baris di tabel posts
+      const { error: deletePostError } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', detail.post_id);
+
+      if (deletePostError) throw deletePostError;
 
       Alert.alert(
         'Sukses',
         'Transaksi diverifikasi dan postingan telah dihapus!',
       );
-      router.back();
+      router.replace('/customer/notification');
     } catch (error: any) {
       Alert.alert('Gagal', error.message);
     } finally {

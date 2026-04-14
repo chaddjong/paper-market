@@ -73,10 +73,16 @@ export default function NotificationScreen() {
             notifications.map((item) => {
               const isVerified = item.status === 'verified';
 
+              const displayTitle = isVerified
+                ? item.product_name
+                : item.posts?.jenis_kertas;
+              const displayImage = isVerified
+                ? item.payment_proof_url
+                : item.posts?.image_url;
+
               return (
                 <NotificationCard
                   key={item.id}
-                  // Jika verified, type-nya 'transaction', jika pending, type-nya 'payment'
                   type={isVerified ? 'transaction' : 'payment'}
                   title={
                     isVerified
@@ -85,10 +91,10 @@ export default function NotificationScreen() {
                   }
                   description={
                     isVerified
-                      ? `${item.posts?.jenis_kertas} anda telah dibayar oleh ${item.buyer?.nama}`
-                      : `${item.buyer?.nama} telah membayar ${item.posts?.jenis_kertas}`
+                      ? `${displayTitle} anda telah dibayar oleh ${item.buyer?.nama}`
+                      : `${item.buyer?.nama} telah membayar ${displayTitle}`
                   }
-                  imageUrl={item.posts?.image_url}
+                  imageUrl={displayImage} // Akan menampilkan bukti transfer jika sudah verified
                   onPress={() =>
                     router.push({
                       pathname: isVerified
