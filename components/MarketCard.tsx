@@ -23,7 +23,6 @@ export default function MarketCard({ data }: any) {
         })
       }
     >
-      {/* Update source di sini */}
       <Image source={imageSource} style={styles.image} />
 
       <Text style={styles.title}>{data.title}</Text>

@@ -15,24 +15,42 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { supabase } from '../../config/supabase';
-import { useAuth } from '../../context/AuthContext';
+// IMPORT DROPDOWN
+import { Dropdown } from 'react-native-element-dropdown';
 
 import BackIcon from '../../assets/icons/arrow-left.svg';
 import UploadIcon from '../../assets/icons/upload.svg';
+import { supabase } from '../../config/supabase';
+import { useAuth } from '../../context/AuthContext';
+
+// Data untuk dropdown sesuai gambar
+const dataJenisKertas = [
+  { label: 'Majalah', value: 'Majalah' },
+  { label: 'Kertas HVS', value: 'Kertas HVS' },
+  { label: 'Buku', value: 'Buku' },
+  { label: 'Koran', value: 'Koran' },
+  { label: 'Map Jilid', value: 'Map Jilid' },
+];
+
+const dataKondisiKertas = [
+  { label: 'Bagus', value: 'Bagus' },
+  { label: 'Rusak', value: 'Rusak' },
+];
 
 export default function CreatePost() {
   const router = useRouter();
   const { user } = useAuth();
 
-  // Form States
   const [image, setImage] = useState<string | null>(null);
-  const [jenisKertas, setJenisKertas] = useState('');
+  const [jenisKertas, setJenisKertas] = useState(''); // State ini akan menampung value dropdown
   const [kondisiKertas, setKondisiKertas] = useState('');
   const [alamat, setAlamat] = useState('');
   const [berat, setBerat] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isFocus, setIsFocus] = useState(false);
+  const [isFocusKondisi, setIsFocusKondisi] = useState(false);
 
+  // ... fungsi pickImage dan handleSubmit tetap sama ...
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -54,7 +72,6 @@ export default function CreatePost() {
 
     setLoading(true);
     try {
-      // 1. Proses Gambar menjadi Blob untuk Supabase
       const response = await fetch(image);
       const blob = await response.blob();
       const arrayBuffer = await new Response(blob).arrayBuffer();
@@ -63,9 +80,8 @@ export default function CreatePost() {
       const fileName = `${user?.id}_${Date.now()}.${fileExt}`;
       const filePath = `posts/${fileName}`;
 
-      // 2. Upload ke Supabase Storage
       const { data: storageData, error: storageError } = await supabase.storage
-        .from('post-images') // Nama bucket Anda
+        .from('post-images')
         .upload(filePath, arrayBuffer, {
           contentType: blob.type,
           upsert: true,
@@ -73,14 +89,12 @@ export default function CreatePost() {
 
       if (storageError) throw storageError;
 
-      // 3. Dapatkan Public URL
       const { data: urlData } = supabase.storage
         .from('post-images')
         .getPublicUrl(filePath);
 
       const publicUrl = urlData.publicUrl;
 
-      // 4. Simpan Metadata ke Tabel 'posts' di Supabase
       const { error: dbError } = await supabase.from('posts').insert([
         {
           user_id: user?.id,
@@ -139,23 +153,50 @@ export default function CreatePost() {
 
             <View style={styles.formGroup}>
               <Text style={styles.label}>Jenis Kertas</Text>
-              <TextInput
-                placeholder="Jenis Kertas (HVS, Koran, dll)"
-                placeholderTextColor="#9A9A9A"
-                style={styles.input}
+              {/* DROPDOWN COMPONENT */}
+              <Dropdown
+                style={[styles.dropdown, isFocus && { borderColor: '#007AFF' }]}
+                placeholderStyle={styles.placeholderStyle}
+                selectedTextStyle={styles.selectedTextStyle}
+                inputSearchStyle={styles.inputSearchStyle}
+                iconStyle={styles.iconStyle}
+                data={dataJenisKertas}
+                maxHeight={300}
+                labelField="label"
+                valueField="value"
+                placeholder={!isFocus ? 'Pilih Jenis Kertas' : '...'}
                 value={jenisKertas}
-                onChangeText={setJenisKertas}
+                onFocus={() => setIsFocus(true)}
+                onBlur={() => setIsFocus(false)}
+                onChange={(item) => {
+                  setJenisKertas(item.value);
+                  setIsFocus(false);
+                }}
               />
             </View>
 
+            {/* Input lainnya tetap sama */}
             <View style={styles.formGroup}>
               <Text style={styles.label}>Kondisi Kertas</Text>
-              <TextInput
-                placeholder="Kondisi Kertas (Bersih, Campuran, dll)"
-                placeholderTextColor="#9A9A9A"
-                style={styles.input}
+              <Dropdown
+                style={[
+                  styles.dropdown,
+                  isFocusKondisi && { borderColor: '#007AFF' },
+                ]}
+                placeholderStyle={styles.placeholderStyle}
+                selectedTextStyle={styles.selectedTextStyle}
+                data={dataKondisiKertas}
+                maxHeight={300}
+                labelField="label"
+                valueField="value"
+                placeholder={!isFocusKondisi ? 'Pilih Kondisi Kertas' : '...'}
                 value={kondisiKertas}
-                onChangeText={setKondisiKertas}
+                onFocus={() => setIsFocusKondisi(true)}
+                onBlur={() => setIsFocusKondisi(false)}
+                onChange={(item) => {
+                  setKondisiKertas(item.value);
+                  setIsFocusKondisi(false);
+                }}
               />
             </View>
 
@@ -201,20 +242,10 @@ export default function CreatePost() {
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-
-  container: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-
+  // ... Styles lama Anda tetap ada, tambahkan style berikut:
+  flex: { flex: 1 },
+  safeArea: { flex: 1, backgroundColor: '#ffffff' },
+  container: { flex: 1, paddingHorizontal: 16 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -222,26 +253,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#DADADA',
   },
-
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
     marginLeft: 12,
     color: '#333',
   },
-
-  scrollContent: {
-    paddingTop: 20,
-    paddingBottom: 120,
-    paddingHorizontal: 4,
-  },
-
-  previewImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-
+  scrollContent: { paddingTop: 20, paddingBottom: 120, paddingHorizontal: 4 },
+  previewImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   uploadCard: {
     backgroundColor: '#FFF',
     borderRadius: 14,
@@ -250,30 +269,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
     elevation: 4,
     marginBottom: 24,
   },
-
   uploadText: {
     fontSize: 16,
     textDecorationLine: 'underline',
     fontWeight: '500',
   },
-
-  formGroup: {
-    marginBottom: 18,
-  },
-
-  label: {
-    fontSize: 15,
-    marginBottom: 8,
-    color: '#333',
-  },
-
+  formGroup: { marginBottom: 18 },
+  label: { fontSize: 15, marginBottom: 8, color: '#333' },
   input: {
     backgroundColor: '#FFF',
     borderRadius: 10,
@@ -283,7 +288,6 @@ const styles = StyleSheet.create({
     borderColor: '#DADADA',
     fontSize: 14,
   },
-
   submitButton: {
     backgroundColor: '#2F343A',
     paddingVertical: 16,
@@ -292,10 +296,31 @@ const styles = StyleSheet.create({
     marginBottom: 50,
     marginHorizontal: 50,
   },
+  submitText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
 
-  submitText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
+  // STYLE BARU UNTUK DROPDOWN
+  dropdown: {
+    height: 50,
+    borderColor: '#DADADA',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    backgroundColor: '#FFF',
+  },
+  placeholderStyle: {
+    fontSize: 14,
+    color: '#9A9A9A',
+  },
+  selectedTextStyle: {
+    fontSize: 14,
+    color: '#333',
+  },
+  iconStyle: {
+    width: 20,
+    height: 20,
+  },
+  inputSearchStyle: {
+    height: 40,
+    fontSize: 14,
   },
 });

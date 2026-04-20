@@ -20,7 +20,7 @@ import BackIcon from '../../assets/icons/arrow-left.svg';
 
 export default function PurchaseForm() {
   const router = useRouter();
-  const { id } = useLocalSearchParams(); // ID Postingan
+  const { id } = useLocalSearchParams();
 
   const [loading, setLoading] = useState(true);
   const [postData, setPostData] = useState<any>(null);
@@ -29,12 +29,10 @@ export default function PurchaseForm() {
   const [totalKg, setTotalKg] = useState('');
   const [estimatedPrice, setEstimatedPrice] = useState(0);
 
-  // 1. Fetch Data Post dan Harga Dasar
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
 
-      // 1. Ambil data postingan
       const { data: post, error: postErr } = await supabase
         .from('posts')
         .select('*')
@@ -45,13 +43,11 @@ export default function PurchaseForm() {
       setPostData(post);
       console.log('Data Post Ditemukan:', post.jenis_kertas);
 
-      // 2. Ambil harga (Gunakan .contains atau pastikan string bersih)
       const cleanTitle = post.jenis_kertas.trim();
 
       const { data: info, error: infoErr } = await supabase
         .from('informations')
         .select('price')
-        // Gunakan eq jika nama harus sama persis, atau ilike jika parsial
         .ilike('title', `%${cleanTitle}%`);
 
       if (infoErr) {
@@ -63,7 +59,6 @@ export default function PurchaseForm() {
         setBasePrice(info[0].price);
       } else {
         console.warn('Harga tidak ditemukan untuk jenis:', cleanTitle);
-        // Opsi: Berikan harga default jika tidak ditemukan di tabel info
         setBasePrice(0);
       }
     } catch (error: any) {
@@ -78,7 +73,6 @@ export default function PurchaseForm() {
     fetchData();
   }, [fetchData]);
 
-  // 2. Logika Perhitungan Real-time
   useEffect(() => {
     const kg = parseFloat(totalKg);
     if (!kg || isNaN(kg) || !postData) {
@@ -86,10 +80,8 @@ export default function PurchaseForm() {
       return;
     }
 
-    // Hitung Harga: (Harga Dasar * Kg)
     let total = basePrice * kg;
 
-    // Jika kondisi Rusak, potong 300 per kg
     if (postData.kondisi_kertas.toLowerCase() === 'rusak') {
       total = total - 300 * kg;
     }
@@ -100,12 +92,10 @@ export default function PurchaseForm() {
   const handleNext = () => {
     const inputKg = parseFloat(totalKg);
 
-    // Validasi Kosong
     if (!inputKg) {
       return Alert.alert('Error', 'Masukkan jumlah pembelian');
     }
 
-    // Validasi Stok (Tidak boleh lebih dari berat_kg di postingan)
     if (inputKg > postData.berat_kg) {
       return Alert.alert(
         'Jumlah Tidak Cukup',
@@ -113,7 +103,6 @@ export default function PurchaseForm() {
       );
     }
 
-    // Kirim data ke halaman berikutnya
     router.push({
       pathname: '/customer/upload-payment-proof',
       params: {

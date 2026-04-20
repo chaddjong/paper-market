@@ -40,15 +40,12 @@ export default function FilterModal({
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.overlay}>
         <View style={styles.container}>
-          {/* HEADER */}
           <View style={styles.header}>
             <Text style={styles.title}>Filter</Text>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
               <CloseIcon width={24} height={24} />
             </TouchableOpacity>
           </View>
-
-          {/* JENIS */}
           <Text style={styles.sectionTitle}>Jenis</Text>
           <View style={styles.chipContainer}>
             {categories.map((item, index) => {
@@ -71,8 +68,6 @@ export default function FilterModal({
               );
             })}
           </View>
-
-          {/* BERAT */}
           <Text style={styles.sectionTitle}>Berat</Text>
           <View style={styles.inputContainer}>
             <TextInput
@@ -92,8 +87,6 @@ export default function FilterModal({
               onChangeText={(txt) => setFilters({ ...filters, maxBerat: txt })}
             />
           </View>
-
-          {/* BUTTON TERAPKAN */}
           <TouchableOpacity style={styles.applyButton} onPress={onClose}>
             <Text style={styles.applyText}>Terapkan Filter</Text>
           </TouchableOpacity>
