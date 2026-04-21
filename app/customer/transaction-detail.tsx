@@ -62,24 +62,23 @@ export default function TransactionDetailScreen() {
       if (postFetchError || !postData)
         throw new Error('Data postingan asli tidak ditemukan.');
 
-      // 2. Update transaksi: Simpan nama produk secara permanen
+      // 2. Update transaksi: Simpan nama produk & URL gambar secara permanen
       // Kita set post_id ke null agar tidak melanggar relasi saat post dihapus
       const { error: updateError } = await supabase
         .from('transactions')
         .update({
           status: 'verified',
           product_name: postData.jenis_kertas,
+          product_image: postData.image_url, // Memastikan gambar tersimpan di riwayat
           post_id: null,
         })
         .eq('id', id);
 
       if (updateError) throw updateError;
 
-      // 3. HAPUS GAMBAR PRODUK DI STORAGE
-      // Kita hapus gambar produk karena barangnya sudah terjual/habis
-      const imageUrl = postData.image_url;
+      // 3. HAPUS GAMBAR PRODUK DI STORAGE (DINONAKTIFKAN)
+      /* const imageUrl = postData.image_url;
       if (imageUrl) {
-        // Pastikan split berdasarkan nama folder storage kamu (misal: 'post-images')
         const filePath = imageUrl.split('post-images/')[1];
         if (filePath) {
           const { error: storageError } = await supabase.storage
@@ -93,6 +92,7 @@ export default function TransactionDetailScreen() {
             );
         }
       }
+      */
 
       // 4. Hapus baris di tabel posts
       const { error: deletePostError } = await supabase
@@ -104,8 +104,10 @@ export default function TransactionDetailScreen() {
 
       Alert.alert(
         'Sukses',
-        'Transaksi diverifikasi dan postingan telah dihapus!',
+        'Transaksi diverifikasi dan postingan telah dihapus dari marketplace!',
       );
+      
+      // Kembali ke halaman notifikasi/history
       router.replace('/customer/notification');
     } catch (error: any) {
       Alert.alert('Gagal', error.message);

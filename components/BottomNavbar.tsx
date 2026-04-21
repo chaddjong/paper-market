@@ -1,25 +1,26 @@
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react'; // Tambah useState & useEffect
+import React, { useEffect, useState } from 'react';
 import {
   Keyboard,
   Platform,
   StyleSheet,
   TouchableOpacity,
   View,
-} from 'react-native'; // Tambah Keyboard
+} from 'react-native';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeIcon from '../assets/icons/home-2.svg';
 import ProfileIcon from '../assets/icons/profile.svg';
 import ShopIcon from '../assets/icons/shop.svg';
+// Import ikon baru untuk customer
+import CustomerItemsIcon from '../assets/icons/customer-items.svg';
 
 export default function BottomNavbar() {
   const router = useRouter();
   const { role } = useAuth();
   const insets = useSafeAreaInsets();
 
-  // State untuk deteksi keyboard
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
 
   useEffect(() => {
@@ -38,13 +39,16 @@ export default function BottomNavbar() {
     };
   }, []);
 
-  // Jika keyboard muncul di Android, sembunyikan navbar
   if (Platform.OS === 'android' && isKeyboardVisible) return null;
 
-  const basePath = role === 'admin' ? '/admin' : '/customer';
+  const isAdmin = role === 'admin';
+  const basePath = isAdmin ? '/admin' : '/customer';
+
+  // Konfigurasi Routes
   const routes = {
     home: `${basePath}/homepage` as const,
-    market: `${basePath}/marketplace` as const,
+    // Jika admin ke marketplace, jika customer ke customer-items
+    middle: isAdmin ? `${basePath}/marketplace` : `${basePath}/customer-items` as const,
     profile: `${basePath}/profile` as const,
   };
 
@@ -53,21 +57,26 @@ export default function BottomNavbar() {
       style={[
         styles.container,
         {
-          // Gunakan padding bottom yang bersih
           paddingBottom: insets.bottom > 0 ? insets.bottom : 20,
-          // Jika keyboard muncul (khusus iOS), kita buat dia menempel
           bottom: 0,
         },
       ]}
     >
+      {/* Tab Home */}
       <TouchableOpacity onPress={() => router.push(routes.home)}>
         <HomeIcon width={24} height={24} />
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => router.push(routes.market)}>
-        <ShopIcon width={24} height={24} />
+      {/* Tab Tengah (Dinamis) */}
+      <TouchableOpacity onPress={() => router.push(routes.middle)}>
+        {isAdmin ? (
+          <ShopIcon width={24} height={24} />
+        ) : (
+          <CustomerItemsIcon width={24} height={24} />
+        )}
       </TouchableOpacity>
 
+      {/* Tab Profile */}
       <TouchableOpacity onPress={() => router.push(routes.profile)}>
         <ProfileIcon width={24} height={24} />
       </TouchableOpacity>
@@ -77,8 +86,6 @@ export default function BottomNavbar() {
 
 const styles = StyleSheet.create({
   container: {
-    // Gunakan posisi relatif atau hilangkan absolute jika dibungkus View di Homepage
-    // Namun jika tetap absolute, pastikan bottom: 0
     position: 'absolute',
     bottom: 0,
     left: 0,
@@ -89,7 +96,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingTop: 20,
-    // Tambahkan elevation agar tidak terlihat transparan saat menumpuk
-    // elevation: 8,
+    zIndex: 100, // Memastikan navbar selalu di atas konten
   },
 });

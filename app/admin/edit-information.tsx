@@ -14,12 +14,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+// Pastikan useSafeAreaInsets diimport
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import BackIcon from '../../assets/icons/arrow-left.svg';
 import { supabase } from '../../config/supabase';
 
 export default function EditInformation() {
   const router = useRouter();
+  const insets = useSafeAreaInsets(); // Ambil data inset smartphone
   const { id } = useLocalSearchParams();
 
   const [loading, setLoading] = useState(true);
@@ -178,11 +180,15 @@ export default function EditInformation() {
 
   if (loading) return <ActivityIndicator style={{ flex: 1 }} />;
 
-  return (
+ return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
+      {/* Menggunakan behavior yang berbeda antar OS agar tombol ikut terangkat 
+         namun tidak menutupi input.
+      */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         <View style={styles.container}>
           <View style={styles.header}>
@@ -192,7 +198,14 @@ export default function EditInformation() {
             <Text style={styles.headerTitle}>Edit Informasi</Text>
           </View>
 
-          <ScrollView contentContainerStyle={styles.scrollContent}>
+          <ScrollView 
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[
+                styles.scrollContent,
+                // Beri padding bottom ekstra agar input terakhir tidak tertutup tombol saat di scroll
+                { paddingBottom: 160 } 
+            ]}
+          >
             <TouchableOpacity onPress={pickImage} style={styles.imageCard}>
               <Image
                 source={{ uri: newImage || imageUrl || '' }}
@@ -226,31 +239,38 @@ export default function EditInformation() {
             <View style={styles.formGroup}>
               <Text style={styles.label}>Kondisi Kertas</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { minHeight: 80 }]}
                 value={condition}
                 onChangeText={setCondition}
+                multiline
               />
             </View>
           </ScrollView>
         </View>
-      </KeyboardAvoidingView>
 
-      <View style={styles.bottomContainer}>
-        <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-          <Text style={styles.deleteText}>Hapus</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.updateButton}
-          onPress={handleUpdate}
-          disabled={updating}
-        >
-          {updating ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.updateText}>Simpan</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+        {/* BOTTOM BUTTONS 
+           Kita bungkus dengan paddingBottom dinamis dari insets.bottom
+        */}
+        <View style={[
+            styles.bottomContainer, 
+            { paddingBottom: insets.bottom > 0 ? insets.bottom : 20 }
+        ]}>
+          <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+            <Text style={styles.deleteText}>Hapus</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.updateButton}
+            onPress={handleUpdate}
+            disabled={updating}
+          >
+            {updating ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.updateText}>Simpan</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -260,114 +280,107 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff',
   },
-
   container: {
     flex: 1,
     paddingHorizontal: 16,
   },
-
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#ffffff',
+    borderBottomColor: '#F0F0F0',
   },
-
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
     marginLeft: 12,
     color: '#333',
   },
-
   scrollContent: {
     paddingTop: 20,
-    paddingBottom: 140,
   },
-
   imageCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#F9F9F9',
     borderRadius: 14,
-    height: 150,
+    height: 180,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
-    marginHorizontal: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#EEEEEE',
   },
-
+  image: {
+    width: '100%',
+    height: '100%',
+  },
   changeOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    // backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    paddingVertical: 8,
     alignItems: 'center',
   },
-  changeText: { color: '#fff', fontWeight: 'bold' },
-
-  image: {
-    width: 120,
-    height: 120,
-  },
-
+  changeText: { color: '#fff', fontSize: 12, fontWeight: '600' },
   formGroup: {
     marginBottom: 18,
   },
-
   label: {
     fontSize: 14,
-    marginBottom: 6,
+    marginBottom: 8,
     color: '#444',
+    fontWeight: '500',
   },
-
   input: {
     backgroundColor: '#ffffff',
-    borderRadius: 8,
+    borderRadius: 10,
     paddingVertical: 12,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     borderWidth: 1,
     borderColor: '#D6D6D6',
     fontSize: 14,
+    color: '#333',
   },
-
   bottomContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    marginBottom: 50,
+    paddingTop: 16,
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    // Position absolute agar melayang di atas scrollview namun dalam KeyboardAvoidingView
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
-
   deleteButton: {
     flex: 1,
     borderWidth: 1,
     borderColor: '#FF3B30',
-    borderRadius: 10,
+    borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     marginRight: 8,
   },
-
   deleteText: {
     color: '#FF3B30',
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
   },
-
   updateButton: {
-    flex: 1,
+    flex: 2, // Tombol simpan lebih lebar
     backgroundColor: '#2F343A',
-    borderRadius: 10,
+    borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     marginLeft: 8,
   },
-
   updateText: {
     color: '#FFF',
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
   },
 });

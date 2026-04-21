@@ -19,7 +19,7 @@ import {
 import { supabase } from '../../config/supabase';
 
 import BottomNavbar from '../../components/BottomNavbar';
-import Header from '../../components/Header';
+import Header from '../admin/components/AdminHeader';
 import AdminInfoCard from '../admin/components/AdminInfoCard';
 import AdminMarketCard from '../admin/components/AdminMarketCard';
 
@@ -44,16 +44,16 @@ export default function Homepage() {
         .order('created_at', { ascending: false });
 
       // 2. Fetch Market Posts
-      const { data: posts, error: postsErr } = await supabase
-        .from('posts')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // const { data: posts, error: postsErr } = await supabase
+      //   .from('posts')
+      //   .select('*')
+      //   .order('created_at', { ascending: false });
 
       if (infoErr) throw infoErr;
-      if (postsErr) throw postsErr;
+      // if (postsErr) throw postsErr;
 
       setInfoData(info || []);
-      setMarketData(posts || []);
+      // setMarketData(posts || []);
     } catch (error: any) {
       console.error('Fetch Admin Data Error:', error.message);
     } finally {
@@ -128,7 +128,7 @@ export default function Homepage() {
                 </ScrollView>
               )}
 
-              {/* SECTION MARKET */}
+              {/* SECTION MARKET
               <Text style={styles.sectionTitle}>Market</Text>
 
               {loading && !refreshing ? (
@@ -155,7 +155,7 @@ export default function Homepage() {
                     />
                   ))}
                 </View>
-              )}
+              )} */}
             </ScrollView>
           </View>
         </KeyboardAvoidingView>

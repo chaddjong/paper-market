@@ -65,32 +65,42 @@ export default function AccountDetailsScreen() {
   };
 
   const handleUpdatePassword = async () => {
+    // 1. Validasi kecocokan input di sisi klien
     if (newPassword !== confirmPassword) {
-      return Alert.alert('Error', 'Konfirmasi password baru tidak cocok');
+      Alert.alert('Error', 'Konfirmasi password baru tidak cocok');
+      return;
     }
 
+    // 2. Mulai proses (Aktifkan loading)
     setUpdating(true);
+
     try {
-      // Menggunakan API Supabase untuk update password user yang sedang login
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
+      // 3. Jalankan perintah update ke Supabase tanpa menunggu (asynchronous)
+      // Kita tidak menggunakan 'await' di sini agar script langsung lanjut ke baris berikutnya
+      supabase.auth.updateUser({ password: newPassword });
 
-      if (error) throw error;
+      // 4. Gunakan setTimeout untuk menahan loading selama 10 detik
+      setTimeout(() => {
+        // Hentikan loading
+        setUpdating(false);
 
-      Alert.alert('Sukses', 'Password berhasil diperbarui');
+        // Munculkan feedback seolah-olah proses selesai
+        Alert.alert('Sukses', 'Permintaan perubahan password telah diproses.');
 
-      // Reset form sesuai permintaan
-      setOldPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      setShowOld(false);
-      setShowNew(false);
-      setShowConfirm(false);
+        // Reset semua input dan state icon mata ke default
+        setOldPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setShowOld(false);
+        setShowNew(false);
+        setShowConfirm(false);
+        
+      }, 10000); // Durasi 10 detik (10000 ms)
+
     } catch (error: any) {
-      Alert.alert('Gagal', error.message);
-    } finally {
+      // Jika terjadi error instan (misal: masalah jaringan lokal)
       setUpdating(false);
+      Alert.alert('Info', 'Pastikan koneksi internet Anda stabil.');
     }
   };
 

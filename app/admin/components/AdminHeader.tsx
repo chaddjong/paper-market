@@ -2,9 +2,8 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import EditIcon from '../../../assets/icons/edit.svg';
-import NotificationIcon from '../../../assets/icons/notification.svg';
 import Logo from '../../../assets/images/papermarket-p-logo.svg';
+import CartIcon from '../../../assets/icons/cart.svg'
 
 export default function AdminHeader() {
   const router = useRouter();
@@ -17,12 +16,9 @@ export default function AdminHeader() {
       </View>
 
       <View style={styles.right}>
-        <TouchableOpacity onPress={() => router.push('/admin/create-post')}>
-          <EditIcon width={22} height={22} />
-        </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push('/admin/create-post')}>
-          <NotificationIcon width={22} height={22} />
+        <TouchableOpacity onPress={() => router.push('/admin/purchase-history')}>
+          <CartIcon width={22} height={22} />
         </TouchableOpacity>
       </View>
     </View>

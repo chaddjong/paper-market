@@ -122,10 +122,12 @@ export default function Marketplace() {
                 )}
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/customer/create-post')}>
+              {/* <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/customer/create-post')}>
                 <EditIcon width={22} height={22} />
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
+
+            <Text style={styles.pageTitle}>Marketplace</Text>
 
             {loading ? (
               <View style={styles.center}>
@@ -223,6 +225,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#D6D6D6',
     marginRight: 10,
+  },
+
+  pageTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#333',
+    marginVertical: 15,
   },
 
   input: {

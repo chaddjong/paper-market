@@ -154,11 +154,14 @@ export default function CreateInformation() {
             <View style={styles.formGroup}>
               <Text style={styles.label}>Kondisi Kertas</Text>
               <TextInput
-                placeholder="Contoh: Bersih & Kering"
+                placeholder="Contoh: Bersih & Kering. &#10;Pastikan tidak ada logam."
                 placeholderTextColor="#9A9A9A"
-                style={styles.input}
+                style={[styles.input, styles.textArea]} // Tambahkan style khusus textArea
                 value={condition}
                 onChangeText={setCondition}
+                multiline={true}                // Mengizinkan lebih dari satu baris
+                numberOfLines={4}               // Jumlah baris awal (opsional)
+                textAlignVertical="top"         // Memastikan teks mulai dari atas (Penting untuk Android)
               />
             </View>
           </ScrollView>
