@@ -28,14 +28,19 @@ export default function CreateInformation() {
   const [image, setImage] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
-  const [condition, setCondition] = useState('');
+
+  // Memberikan default value pada state condition
+  const [condition, setCondition] = useState(
+    'Bagus\nRusak (robek, sebagian terbakar)(- Rp. 300/kg)',
+  );
+
   const [loading, setLoading] = useState(false);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [1, 1], // Information card biasanya square lebih bagus
+      aspect: [1, 1],
       quality: 0.7,
     });
 
@@ -51,14 +56,13 @@ export default function CreateInformation() {
 
     setLoading(true);
     try {
-      // 1. Upload ke Storage (Folder informations)
       const response = await fetch(image);
       const blob = await response.blob();
       const arrayBuffer = await new Response(blob).arrayBuffer();
 
       const fileExt = image.split('.').pop();
       const fileName = `info_${Date.now()}.${fileExt}`;
-      const filePath = `informations/${fileName}`; // Masuk ke folder informations
+      const filePath = `informations/${fileName}`;
 
       const { error: storageError } = await supabase.storage
         .from('post-images')
@@ -69,14 +73,12 @@ export default function CreateInformation() {
 
       if (storageError) throw storageError;
 
-      // 2. Ambil Public URL
       const { data: urlData } = supabase.storage
         .from('post-images')
         .getPublicUrl(filePath);
 
       const publicUrl = urlData.publicUrl;
 
-      // 3. Simpan ke Tabel informations
       const { error: dbError } = await supabase.from('informations').insert([
         {
           title: title,
@@ -115,7 +117,6 @@ export default function CreateInformation() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
           >
-            {/* Upload Area */}
             <TouchableOpacity style={styles.uploadCard} onPress={pickImage}>
               {image ? (
                 <Image source={{ uri: image }} style={styles.previewImage} />
@@ -127,7 +128,6 @@ export default function CreateInformation() {
               )}
             </TouchableOpacity>
 
-            {/* FORM */}
             <View style={styles.formGroup}>
               <Text style={styles.label}>Jenis Kertas</Text>
               <TextInput
@@ -154,15 +154,18 @@ export default function CreateInformation() {
             <View style={styles.formGroup}>
               <Text style={styles.label}>Kondisi Kertas</Text>
               <TextInput
-                placeholder="Contoh: Bersih & Kering. &#10;Pastikan tidak ada logam."
-                placeholderTextColor="#9A9A9A"
-                style={[styles.input, styles.textArea]} // Tambahkan style khusus textArea
+                style={[styles.input, styles.textArea]}
                 value={condition}
-                onChangeText={setCondition}
-                multiline={true}                // Mengizinkan lebih dari satu baris
-                numberOfLines={4}               // Jumlah baris awal (opsional)
-                textAlignVertical="top"         // Memastikan teks mulai dari atas (Penting untuk Android)
+                onChangeText={setCondition} // Admin bebas menghapus/mengganti teks harga di sini
+                multiline={true}
+                numberOfLines={4}
+                textAlignVertical="top"
+                placeholder="Deskripsikan kondisi kertas..."
+                placeholderTextColor="#9A9A9A"
               />
+              <Text style={styles.hint}>
+                *Teks di atas dapat diubah sesuai kebijakan harga.
+              </Text>
             </View>
           </ScrollView>
         </View>
@@ -184,20 +187,9 @@ export default function CreateInformation() {
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-
-  container: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-
+  flex: { flex: 1 },
+  safeArea: { flex: 1, backgroundColor: '#ffffff' },
+  container: { flex: 1, paddingHorizontal: 16 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -205,22 +197,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#DADADA',
   },
-
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
     marginLeft: 12,
     color: '#333',
   },
-
-  scrollContent: {
-    paddingTop: 20,
-    paddingBottom: 120,
-    paddingHorizontal: 4,
-  },
-
+  scrollContent: { paddingTop: 20, paddingBottom: 120, paddingHorizontal: 4 },
   previewImage: { width: '100%', height: '100%', resizeMode: 'cover' },
-
   uploadCard: {
     backgroundColor: '#FFF',
     borderRadius: 14,
@@ -229,30 +213,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
     elevation: 4,
     marginBottom: 24,
   },
-
   uploadText: {
     fontSize: 16,
     textDecorationLine: 'underline',
     fontWeight: '500',
   },
-
-  formGroup: {
-    marginBottom: 18,
-  },
-
-  label: {
-    fontSize: 15,
-    marginBottom: 8,
-    color: '#333',
-  },
-
+  formGroup: { marginBottom: 18 },
+  label: { fontSize: 15, marginBottom: 8, color: '#333' },
   input: {
     backgroundColor: '#FFF',
     borderRadius: 10,
@@ -261,8 +231,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#DADADA',
     fontSize: 14,
+    color: '#333',
   },
-
+  textArea: {
+    minHeight: 100,
+  },
+  hint: {
+    fontSize: 11,
+    color: '#9A9A9A',
+    marginTop: 6,
+    fontStyle: 'italic',
+  },
   submitButton: {
     backgroundColor: '#2F343A',
     paddingVertical: 16,
@@ -271,10 +250,5 @@ const styles = StyleSheet.create({
     marginBottom: 50,
     marginHorizontal: 50,
   },
-
-  submitText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  submitText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
 });

@@ -20,12 +20,12 @@ import InfoCard from '../../components/InfoCard';
 export default function Homepage() {
   const insets = useSafeAreaInsets();
 
-  // State hanya untuk informasi (Katalog Harga)
+  // State untuk informasi (Katalog Harga)
   const [informations, setInformations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Fungsi Fetch Hanya untuk Informasi
+  // Fungsi Fetch Informasi
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
@@ -75,26 +75,26 @@ export default function Homepage() {
             {loading && !refreshing ? (
               <ActivityIndicator color="#2F343A" style={{ marginTop: 20 }} />
             ) : (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.infoScroll}
-              >
+              /* Container Utama untuk Grid Alami */
+              <View style={styles.infoGrid}>
                 {informations.length > 0 ? (
                   informations.map((item) => (
-                    <InfoCard
-                      key={item.id}
-                      data={{
-                        title: item.title,
-                        price: `Rp. ${item.price.toLocaleString('id-ID')}`,
-                        image: item.image_url,
-                      }}
-                    />
+                    <View key={item.id} style={styles.cardWrapper}>
+                      <InfoCard
+                        data={{
+                          title: item.title,
+                          price: `Rp. ${item.price.toLocaleString('id-ID')}`,
+                          image: item.image_url,
+                        }}
+                      />
+                    </View>
                   ))
                 ) : (
-                  <Text style={styles.emptyText}>Belum ada informasi harga.</Text>
+                  <Text style={styles.emptyText}>
+                    Belum ada informasi harga.
+                  </Text>
                 )}
-              </ScrollView>
+              </View>
             )}
           </ScrollView>
         </View>
@@ -127,8 +127,14 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     color: '#333',
   },
-  infoScroll: {
-    marginBottom: 10,
+  infoGrid: {
+    flexDirection: 'row', // Arah menyamping (kiri ke kanan)
+    flexWrap: 'wrap', // Turun ke baris baru jika ruang tidak cukup
+    justifyContent: 'space-between', // Memberikan jarak antar kolom kiri & kanan
+  },
+  cardWrapper: {
+    width: '48%', // Mengatur agar muat 2 item per baris dengan gap sedikit
+    marginBottom: 16, // Jarak antar baris ke bawah
   },
   emptyText: {
     textAlign: 'center',

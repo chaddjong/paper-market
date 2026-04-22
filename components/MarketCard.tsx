@@ -11,12 +11,12 @@ export default function MarketCard({ data, showEdit = false }: any) {
   return (
     <TouchableOpacity
       style={styles.card}
-      onPress={() =>
-        router.push({
-          pathname: '/customer/product-detail',
-          params: { id: data.id },
-        })
-      }
+      // onPress={() =>
+      //   router.push({
+      //     pathname: '/customer/product-detail',
+      //     params: { id: data.id },
+      //   })
+      // }
     >
       <Image source={imageSource} style={styles.image} />
       <Text style={styles.title}>{data.title}</Text>

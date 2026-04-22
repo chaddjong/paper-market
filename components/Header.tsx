@@ -17,9 +17,9 @@ export default function Header() {
       </View>
 
       <View style={styles.right}>
-        <TouchableOpacity onPress={() => router.push('/customer/create-post')}>
+        {/* <TouchableOpacity onPress={() => router.push('/customer/create-post')}>
           <EditIcon width={22} height={22} />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         <TouchableOpacity
           onPress={() => router.push('/customer/notification')}

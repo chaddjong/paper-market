@@ -14,14 +14,16 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-// Pastikan useSafeAreaInsets diimport
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import BackIcon from '../../assets/icons/arrow-left.svg';
 import { supabase } from '../../config/supabase';
 
 export default function EditInformation() {
   const router = useRouter();
-  const insets = useSafeAreaInsets(); // Ambil data inset smartphone
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams();
 
   const [loading, setLoading] = useState(true);
@@ -49,11 +51,11 @@ export default function EditInformation() {
     } finally {
       setLoading(false);
     }
-  }, [id]); // 3. Masukkan id sebagai dependency
+  }, [id]);
 
   useEffect(() => {
     fetchDetail();
-  }, [fetchDetail]); // 4. Sekarang fetchDetail aman dimasukkan ke sini
+  }, [fetchDetail]);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -69,14 +71,8 @@ export default function EditInformation() {
     setUpdating(true);
     try {
       let finalImageUrl = imageUrl;
-
-      // 1. CEK: Jika ada gambar baru yang dipilih
       if (newImage && imageUrl) {
-        // A. Ambil nama file lama dari URL (untuk dihapus)
-        // URL Supabase biasanya: .../public/post-images/informations/namafile.jpg
         const oldFilePath = imageUrl.split('post-images/')[1];
-
-        // B. Upload gambar baru
         const response = await fetch(newImage);
         const blob = await response.blob();
         const arrayBuffer = await new Response(blob).arrayBuffer();
@@ -87,25 +83,16 @@ export default function EditInformation() {
           .upload(fileName, arrayBuffer, { contentType: blob.type });
 
         if (uploadError) throw uploadError;
-
-        // C. HAPUS GAMBAR LAMA dari Storage
         if (oldFilePath) {
-          const { error: removeError } = await supabase.storage
-            .from('post-images')
-            .remove([oldFilePath]);
-
-          if (removeError)
-            console.error('Gagal hapus file lama:', removeError.message);
+          await supabase.storage.from('post-images').remove([oldFilePath]);
         }
 
-        // D. Dapatkan URL baru
         const { data: urlData } = supabase.storage
           .from('post-images')
           .getPublicUrl(fileName);
         finalImageUrl = urlData.publicUrl;
       }
 
-      // 2. Update database dengan URL baru (atau tetap yang lama jika tidak ganti)
       const { error } = await supabase
         .from('informations')
         .update({
@@ -117,8 +104,7 @@ export default function EditInformation() {
         .eq('id', id);
 
       if (error) throw error;
-
-      Alert.alert('Sukses', 'Informasi diperbarui dan gambar lama dihapus');
+      Alert.alert('Sukses', 'Informasi diperbarui');
       router.back();
     } catch (error: any) {
       Alert.alert('Gagal', error.message);
@@ -128,67 +114,36 @@ export default function EditInformation() {
   };
 
   const handleDelete = async () => {
-    Alert.alert(
-      'Hapus',
-      'Yakin ingin menghapus informasi ini? Gambar juga akan dihapus dari storage.',
-      [
-        { text: 'Batal', style: 'cancel' },
-        {
-          text: 'Hapus',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // 1. Ambil Path file dari URL sebelum datanya dihapus
-              // Kita asumsikan URL mengandung 'post-images/' sebagai nama bucket
-              if (imageUrl) {
-                const filePath = imageUrl.split('post-images/')[1];
-
-                if (filePath) {
-                  // 2. Hapus file di Supabase Storage
-                  const { error: storageError } = await supabase.storage
-                    .from('post-images')
-                    .remove([filePath]);
-
-                  if (storageError) {
-                    console.error(
-                      'Gagal hapus file di storage:',
-                      storageError.message,
-                    );
-                    // Kita lanjut saja tetap hapus data di DB agar tidak stuck
-                  }
-                }
-              }
-
-              // 3. Hapus data di Tabel Database
-              const { error: dbError } = await supabase
-                .from('informations') // atau 'posts' jika di file edit-post
-                .delete()
-                .eq('id', id);
-
-              if (dbError) throw dbError;
-
-              Alert.alert('Sukses', 'Informasi berhasil dihapus!');
-              router.back();
-            } catch (error: any) {
-              Alert.alert('Gagal Menghapus', error.message);
+    Alert.alert('Hapus', 'Yakin ingin menghapus?', [
+      { text: 'Batal', style: 'cancel' },
+      {
+        text: 'Hapus',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            if (imageUrl) {
+              const filePath = imageUrl.split('post-images/')[1];
+              if (filePath)
+                await supabase.storage.from('post-images').remove([filePath]);
             }
-          },
+            await supabase.from('informations').delete().eq('id', id);
+            router.back();
+          } catch (error: any) {
+            Alert.alert('Gagal', error.message);
+          }
         },
-      ],
-    );
+      },
+    ]);
   };
 
   if (loading) return <ActivityIndicator style={{ flex: 1 }} />;
 
- return (
+  return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      {/* Menggunakan behavior yang berbeda antar OS agar tombol ikut terangkat 
-         namun tidak menutupi input.
-      */}
+      {/* 1. KeyboardAvoidingView membungkus Header dan ScrollView */}
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.container}>
           <View style={styles.header}>
@@ -198,13 +153,9 @@ export default function EditInformation() {
             <Text style={styles.headerTitle}>Edit Informasi</Text>
           </View>
 
-          <ScrollView 
+          <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={[
-                styles.scrollContent,
-                // Beri padding bottom ekstra agar input terakhir tidak tertutup tombol saat di scroll
-                { paddingBottom: 160 } 
-            ]}
+            contentContainerStyle={styles.scrollContent}
           >
             <TouchableOpacity onPress={pickImage} style={styles.imageCard}>
               <Image
@@ -223,6 +174,7 @@ export default function EditInformation() {
                 style={styles.input}
                 value={title}
                 onChangeText={setTitle}
+                placeholder="Masukkan jenis kertas"
               />
             </View>
 
@@ -233,49 +185,53 @@ export default function EditInformation() {
                 value={price}
                 onChangeText={setPrice}
                 keyboardType="numeric"
+                placeholder="Masukkan harga"
               />
             </View>
 
             <View style={styles.formGroup}>
               <Text style={styles.label}>Kondisi Kertas</Text>
               <TextInput
-                style={[styles.input, { minHeight: 80 }]}
+                style={[
+                  styles.input,
+                  { minHeight: 120, textAlignVertical: 'top' },
+                ]}
                 value={condition}
                 onChangeText={setCondition}
                 multiline
+                placeholder="Jelaskan kondisi kertas"
               />
             </View>
           </ScrollView>
         </View>
-
-        {/* BOTTOM BUTTONS 
-           Kita bungkus dengan paddingBottom dinamis dari insets.bottom
-        */}
-        <View style={[
-            styles.bottomContainer, 
-            { paddingBottom: insets.bottom > 0 ? insets.bottom : 20 }
-        ]}>
-          <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-            <Text style={styles.deleteText}>Hapus</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.updateButton}
-            onPress={handleUpdate}
-            disabled={updating}
-          >
-            {updating ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.updateText}>Simpan</Text>
-            )}
-          </TouchableOpacity>
-        </View>
       </KeyboardAvoidingView>
+
+      {/* 2. Action Buttons diletakkan DI LUAR KeyboardAvoidingView */}
+      {/* Ini akan membuat tombol terangkat tapi tetap kembali ke posisi awal karena flow layout */}
+      <View style={styles.bottomActions}>
+        <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+          <Text style={styles.deleteText}>Hapus</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.updateButton, updating && { opacity: 0.7 }]}
+          onPress={handleUpdate}
+          disabled={updating}
+        >
+          {updating ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.updateText}>Simpan</Text>
+          )}
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   safeArea: {
     flex: 1,
     backgroundColor: '#ffffff',
@@ -287,9 +243,9 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderColor: '#DADADA',
   },
   headerTitle: {
     fontSize: 18,
@@ -299,17 +255,23 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: 20,
+    // Sesuai contoh: paddingBottom besar agar konten tidak tertutup tombol saat di-scroll
+    paddingBottom: 120,
+    paddingHorizontal: 4,
   },
   imageCard: {
-    backgroundColor: '#F9F9F9',
+    backgroundColor: '#FFF',
     borderRadius: 14,
     height: 180,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#EEEEEE',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   image: {
     width: '100%',
@@ -328,33 +290,27 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   label: {
-    fontSize: 14,
+    fontSize: 15,
     marginBottom: 8,
-    color: '#444',
-    fontWeight: '500',
+    color: '#333',
   },
   input: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FFF',
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: '#D6D6D6',
+    borderColor: '#DADADA',
     fontSize: 14,
     color: '#333',
   },
-  bottomContainer: {
+  bottomActions: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    backgroundColor: '#ffffff',
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-    // Position absolute agar melayang di atas scrollview namun dalam KeyboardAvoidingView
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    gap: 12,
+    // Sesuai contoh: diletakkan di bawah dengan margin
+    marginBottom: 20,
   },
   deleteButton: {
     flex: 1,
@@ -363,7 +319,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
-    marginRight: 8,
   },
   deleteText: {
     color: '#FF3B30',
@@ -371,12 +326,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   updateButton: {
-    flex: 2, // Tombol simpan lebih lebar
+    flex: 2,
     backgroundColor: '#2F343A',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
-    marginLeft: 8,
   },
   updateText: {
     color: '#FFF',

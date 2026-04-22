@@ -21,7 +21,6 @@ import { supabase } from '../../config/supabase';
 import BottomNavbar from '../../components/BottomNavbar';
 import Header from '../admin/components/AdminHeader';
 import AdminInfoCard from '../admin/components/AdminInfoCard';
-import AdminMarketCard from '../admin/components/AdminMarketCard';
 
 import PlusIcon from '../../assets/icons/plus.svg';
 
@@ -93,6 +92,7 @@ export default function Homepage() {
               }
             >
               {/* SECTION INFORMASI */}
+              {/* SECTION INFORMASI */}
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Informasi</Text>
                 <TouchableOpacity
@@ -108,24 +108,22 @@ export default function Homepage() {
                   style={{ marginVertical: 20 }}
                 />
               ) : (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.infoScroll}
-                >
+                /* Ganti ScrollView Horizontal dengan View Grid */
+                <View style={styles.infoGrid}>
                   {infoData.map((item) => (
-                    <AdminInfoCard
-                      key={item.id}
-                      data={{
-                        id: item.id,
-                        title: item.title,
-                        price: `Rp. ${item.price.toLocaleString()}`,
-                        image: item.image_url,
-                        condition: item.condition,
-                      }}
-                    />
+                    <View key={item.id} style={styles.infoCardWrapper}>
+                      <AdminInfoCard
+                        data={{
+                          id: item.id,
+                          title: item.title,
+                          price: `Rp. ${item.price.toLocaleString()}`,
+                          image: item.image_url,
+                          condition: item.condition,
+                        }}
+                      />
+                    </View>
                   ))}
-                </ScrollView>
+                </View>
               )}
 
               {/* SECTION MARKET
@@ -203,6 +201,18 @@ const styles = StyleSheet.create({
 
   infoScroll: {
     marginBottom: 10,
+  },
+
+  infoGrid: {
+    flexDirection: 'row', // Arahkan ke samping
+    flexWrap: 'wrap', // Baris baru jika tidak muat
+    justifyContent: 'space-between', // Beri jarak antar kolom kiri & kanan
+    marginBottom: 10,
+  },
+
+  infoCardWrapper: {
+    width: '48%', // Sedikit kurang dari 50% untuk ruang gap
+    marginBottom: 14, // Jarak antar baris ke bawah
   },
 
   marketGrid: {

@@ -15,7 +15,7 @@ export default function AdminInfoCard({ data }: any) {
       <Text style={styles.price}>
         <Text style={styles.priceGreen}>{data.price}</Text> /Kg
       </Text>
-      <Text style={styles.desc}>Kualitas : {data.condition}</Text>
+      <Text style={styles.desc}>Kondisi kertas : {data.condition}</Text>
 
       <TouchableOpacity
         style={styles.editButton}

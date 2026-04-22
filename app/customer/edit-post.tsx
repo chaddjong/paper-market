@@ -14,12 +14,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Dropdown } from 'react-native-element-dropdown'; // Import Dropdown
+import { Dropdown } from 'react-native-element-dropdown';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import BackIcon from '../../assets/icons/arrow-left.svg';
 import { supabase } from '../../config/supabase';
 
-// Data Dropdown (Samakan dengan create-post)
 const dataJenisKertas = [
   { label: 'Majalah', value: 'Majalah' },
   { label: 'Kertas HVS', value: 'Kertas HVS' },
@@ -40,8 +42,7 @@ export default function EditPost() {
 
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-  
-  // Form States
+
   const [jenisKertas, setJenisKertas] = useState('');
   const [kondisi, setKondisi] = useState('');
   const [alamat, setAlamat] = useState('');
@@ -49,7 +50,6 @@ export default function EditPost() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [newImage, setNewImage] = useState<string | null>(null);
 
-  // Focus States untuk Dropdown UI
   const [isFocusJenis, setIsFocusJenis] = useState(false);
   const [isFocusKondisi, setIsFocusKondisi] = useState(false);
 
@@ -60,10 +60,9 @@ export default function EditPost() {
         .select('*')
         .eq('id', id)
         .single();
-      
+
       if (error) throw error;
 
-      // Set value sesuai data database
       setJenisKertas(data.jenis_kertas);
       setKondisi(data.kondisi_kertas);
       setAlamat(data.alamat);
@@ -103,7 +102,6 @@ export default function EditPost() {
     try {
       let finalImageUrl = imageUrl;
 
-      // Logika Upload Gambar Baru (jika ada)
       if (newImage) {
         const response = await fetch(newImage);
         const blob = await response.blob();
@@ -119,14 +117,15 @@ export default function EditPost() {
 
         if (uploadError) throw uploadError;
 
-        // Ambil URL baru
-        const { data: urlData } = supabase.storage.from('post-images').getPublicUrl(fileName);
+        const { data: urlData } = supabase.storage
+          .from('post-images')
+          .getPublicUrl(fileName);
         finalImageUrl = urlData.publicUrl;
 
-        // Hapus file lama dari storage (Opsional: agar storage bersih)
         if (imageUrl) {
           const oldPath = imageUrl.split('post-images/')[1];
-          if (oldPath) await supabase.storage.from('post-images').remove([oldPath]);
+          if (oldPath)
+            await supabase.storage.from('post-images').remove([oldPath]);
         }
       }
 
@@ -161,9 +160,13 @@ export default function EditPost() {
           try {
             if (imageUrl) {
               const filePath = imageUrl.split('post-images/')[1];
-              if (filePath) await supabase.storage.from('post-images').remove([filePath]);
+              if (filePath)
+                await supabase.storage.from('post-images').remove([filePath]);
             }
-            const { error } = await supabase.from('posts').delete().eq('id', id);
+            const { error } = await supabase
+              .from('posts')
+              .delete()
+              .eq('id', id);
             if (error) throw error;
             router.back();
           } catch (error: any) {
@@ -177,10 +180,10 @@ export default function EditPost() {
   if (loading) return <ActivityIndicator style={{ flex: 1 }} />;
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}> 
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.container}>
           <View style={styles.header}>
@@ -190,19 +193,16 @@ export default function EditPost() {
             <Text style={styles.headerTitle}>Edit Postingan</Text>
           </View>
 
-          <ScrollView 
-            showsVerticalScrollIndicator={false} 
-            contentContainerStyle={[
-              styles.scrollContent,
-              // Tambahkan padding extra agar input paling bawah tidak tertutup tombol
-              { paddingBottom: 150 } 
-            ]}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={styles.scrollContent}
           >
             <TouchableOpacity style={styles.imageCard} onPress={pickImage}>
               <Image
                 source={{ uri: newImage || imageUrl || '' }}
                 style={styles.image}
-                resizeMode="contain"
+                resizeMode="cover"
               />
               <View style={styles.imageOverlay}>
                 <Text style={styles.imageOverlayText}>Ganti Gambar</Text>
@@ -212,7 +212,10 @@ export default function EditPost() {
             <View style={styles.formGroup}>
               <Text style={styles.label}>Jenis Kertas</Text>
               <Dropdown
-                style={[styles.dropdown, isFocusJenis && { borderColor: '#007AFF' }]}
+                style={[
+                  styles.dropdown,
+                  isFocusJenis && { borderColor: '#007AFF' },
+                ]}
                 placeholderStyle={styles.placeholderStyle}
                 selectedTextStyle={styles.selectedTextStyle}
                 data={dataJenisKertas}
@@ -223,7 +226,7 @@ export default function EditPost() {
                 value={jenisKertas}
                 onFocus={() => setIsFocusJenis(true)}
                 onBlur={() => setIsFocusJenis(false)}
-                onChange={item => {
+                onChange={(item) => {
                   setJenisKertas(item.value);
                   setIsFocusJenis(false);
                 }}
@@ -233,7 +236,10 @@ export default function EditPost() {
             <View style={styles.formGroup}>
               <Text style={styles.label}>Kondisi Kertas</Text>
               <Dropdown
-                style={[styles.dropdown, isFocusKondisi && { borderColor: '#007AFF' }]}
+                style={[
+                  styles.dropdown,
+                  isFocusKondisi && { borderColor: '#007AFF' },
+                ]}
                 placeholderStyle={styles.placeholderStyle}
                 selectedTextStyle={styles.selectedTextStyle}
                 data={dataKondisiKertas}
@@ -244,7 +250,7 @@ export default function EditPost() {
                 value={kondisi}
                 onFocus={() => setIsFocusKondisi(true)}
                 onBlur={() => setIsFocusKondisi(false)}
-                onChange={item => {
+                onChange={(item) => {
                   setKondisi(item.value);
                   setIsFocusKondisi(false);
                 }}
@@ -273,32 +279,36 @@ export default function EditPost() {
             </View>
           </ScrollView>
         </View>
-
-        <View style={[
-          styles.bottomContainer, 
-          { paddingBottom: insets.bottom - 100 > 0 ? insets.bottom : 0 }
-        ]}>
-          <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-            <Text style={styles.deleteText}>Hapus</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.updateButton, updating && { opacity: 0.7 }]}
-            onPress={handleUpdate}
-            disabled={updating}
-          >
-            {updating ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.updateText}>Perbarui</Text>
-            )}
-          </TouchableOpacity>
-        </View>
       </KeyboardAvoidingView>
+
+      {/* Action Buttons berada DI LUAR KeyboardAvoidingView agar transisi posisi lancar */}
+      <View
+        style={[
+          styles.bottomContainer,
+          { paddingBottom: insets.bottom > 0 ? insets.bottom : 20 },
+        ]}
+      >
+        <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+          <Text style={styles.deleteText}>Hapus</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.updateButton, updating && { opacity: 0.7 }]}
+          onPress={handleUpdate}
+          disabled={updating}
+        >
+          {updating ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.updateText}>Perbarui</Text>
+          )}
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   safeArea: { flex: 1, backgroundColor: '#ffffff' },
   container: { flex: 1, paddingHorizontal: 16 },
   header: {
@@ -308,10 +318,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  headerTitle: { fontSize: 18, fontWeight: '600', marginLeft: 12, color: '#333' },
-  scrollContent: { paddingTop: 20, paddingBottom: 40 },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginLeft: 12,
+    color: '#333',
+  },
+  scrollContent: {
+    paddingTop: 20,
+    paddingBottom: 100, // Memberi ruang agar input terbawah bisa di-scroll melewati tombol
+    paddingHorizontal: 4,
+  },
   imageCard: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FFF',
     borderRadius: 14,
     height: 180,
     justifyContent: 'center',
@@ -320,7 +339,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#eee',
-    elevation: 2,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   image: { width: '100%', height: '100%' },
   imageOverlay: {
@@ -333,7 +356,7 @@ const styles = StyleSheet.create({
   },
   imageOverlayText: { color: '#fff', fontSize: 12, fontWeight: '600' },
   formGroup: { marginBottom: 18 },
-  label: { fontSize: 14, marginBottom: 8, color: '#444', fontWeight: '500' },
+  label: { fontSize: 15, marginBottom: 8, color: '#333' },
   input: {
     backgroundColor: '#fff',
     borderRadius: 10,
@@ -342,6 +365,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#DADADA',
     fontSize: 14,
+    color: '#333',
   },
   dropdown: {
     height: 50,
@@ -355,7 +379,8 @@ const styles = StyleSheet.create({
   selectedTextStyle: { fontSize: 14, color: '#333' },
   bottomContainer: {
     flexDirection: 'row',
-    padding: 16,
+    paddingHorizontal: 20,
+    paddingTop: 16,
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',

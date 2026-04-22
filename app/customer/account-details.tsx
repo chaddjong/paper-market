@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons'; // Library icon bawaan Expo
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -31,12 +31,10 @@ export default function AccountDetailsScreen() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // States untuk Ubah Password
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  // States untuk Visibility Password
   const [showOld, setShowOld] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -65,46 +63,32 @@ export default function AccountDetailsScreen() {
   };
 
   const handleUpdatePassword = async () => {
-    // 1. Validasi kecocokan input di sisi klien
     if (newPassword !== confirmPassword) {
       Alert.alert('Error', 'Konfirmasi password baru tidak cocok');
       return;
     }
 
-    // 2. Mulai proses (Aktifkan loading)
     setUpdating(true);
 
     try {
-      // 3. Jalankan perintah update ke Supabase tanpa menunggu (asynchronous)
-      // Kita tidak menggunakan 'await' di sini agar script langsung lanjut ke baris berikutnya
       supabase.auth.updateUser({ password: newPassword });
 
-      // 4. Gunakan setTimeout untuk menahan loading selama 10 detik
       setTimeout(() => {
-        // Hentikan loading
         setUpdating(false);
-
-        // Munculkan feedback seolah-olah proses selesai
         Alert.alert('Sukses', 'Permintaan perubahan password telah diproses.');
-
-        // Reset semua input dan state icon mata ke default
         setOldPassword('');
         setNewPassword('');
         setConfirmPassword('');
         setShowOld(false);
         setShowNew(false);
         setShowConfirm(false);
-        
-      }, 10000); // Durasi 10 detik (10000 ms)
-
+      }, 10000);
     } catch (error: any) {
-      // Jika terjadi error instan (misal: masalah jaringan lokal)
       setUpdating(false);
       Alert.alert('Info', 'Pastikan koneksi internet Anda stabil.');
     }
   };
 
-  // Logika button enable: ketiga kotak harus terisi
   const isButtonDisabled =
     !oldPassword || !newPassword || !confirmPassword || updating;
 
@@ -112,18 +96,13 @@ export default function AccountDetailsScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.flex}>
         <KeyboardAvoidingView
-          style={styles.container}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          // Offset ditambahkan agar saat keyboard naik, posisi input tidak terlalu mepet
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={[
-              styles.scrollContainer,
-              { paddingBottom: 120 + insets.bottom },
-            ]}
-            keyboardShouldPersistTaps="handled"
-          >
-            {/* Header */}
+          <View style={styles.container}>
+            {/* Header tetap di atas */}
             <View style={styles.header}>
               <TouchableOpacity onPress={() => router.back()}>
                 <BackIcon width={22} height={22} />
@@ -133,123 +112,122 @@ export default function AccountDetailsScreen() {
 
             <View style={styles.headerDivider} />
 
-            {loading ? (
-              <ActivityIndicator color="#2F343A" style={{ marginTop: 50 }} />
-            ) : (
-              <View style={styles.formContainer}>
-                {/* Data Profil (Locked) */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Nama</Text>
-                  <TextInput
-                    style={[styles.input, styles.disabledInput]}
-                    value={profile?.nama || '-'}
-                    editable={false}
-                  />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Email</Text>
-                  <TextInput
-                    style={[styles.input, styles.disabledInput]}
-                    value={profile?.email || '-'}
-                    editable={false}
-                  />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Nomor Whatsapp</Text>
-                  <TextInput
-                    style={[styles.input, styles.disabledInput]}
-                    value={profile?.phone || '-'}
-                    editable={false}
-                  />
-                </View>
-
-                {/* Section Ubah Password */}
-                <Text
-                  style={[
-                    styles.label,
-                    { color: '#000', marginTop: 10, fontWeight: '400', fontSize: 14 },
-                  ]}
-                >
-                  Ubah Password
-                </Text>
-
-                {/* Input Password Lama */}
-                <View style={styles.passwordWrapper}>
-                  <TextInput
-                    style={styles.passwordInput}
-                    placeholder="Masukkan Password Lama"
-                    secureTextEntry={!showOld}
-                    value={oldPassword}
-                    onChangeText={setOldPassword}
-                  />
-                  <TouchableOpacity onPress={() => setShowOld(!showOld)}>
-                    <Ionicons
-                      name={showOld ? 'eye-outline' : 'eye-off-outline'}
-                      size={20}
-                      color="#7A7A7A"
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.scrollContent}
+            >
+              {loading ? (
+                <ActivityIndicator color="#2F343A" style={{ marginTop: 50 }} />
+              ) : (
+                <View style={styles.formContainer}>
+                  {/* Data Profil (Locked) */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Nama</Text>
+                    <TextInput
+                      style={[styles.input, styles.disabledInput]}
+                      value={profile?.nama || '-'}
+                      editable={false}
                     />
-                  </TouchableOpacity>
-                </View>
+                  </View>
 
-                {/* Input Password Baru */}
-                <View style={styles.passwordWrapper}>
-                  <TextInput
-                    style={styles.passwordInput}
-                    placeholder="Masukkan Password Baru"
-                    secureTextEntry={!showNew}
-                    value={newPassword}
-                    onChangeText={setNewPassword}
-                  />
-                  <TouchableOpacity onPress={() => setShowNew(!showNew)}>
-                    <Ionicons
-                      name={showNew ? 'eye-outline' : 'eye-off-outline'}
-                      size={20}
-                      color="#7A7A7A"
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Email</Text>
+                    <TextInput
+                      style={[styles.input, styles.disabledInput]}
+                      value={profile?.email || '-'}
+                      editable={false}
                     />
-                  </TouchableOpacity>
-                </View>
+                  </View>
 
-                {/* Konfirmasi Password Baru */}
-                <View style={styles.passwordWrapper}>
-                  <TextInput
-                    style={styles.passwordInput}
-                    placeholder="Konfirmasi Password Baru"
-                    secureTextEntry={!showConfirm}
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                  />
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Nomor Whatsapp</Text>
+                    <TextInput
+                      style={[styles.input, styles.disabledInput]}
+                      value={profile?.phone || '-'}
+                      editable={false}
+                    />
+                  </View>
+
+                  <Text style={[styles.label, styles.sectionLabel]}>
+                    Ubah Password
+                  </Text>
+
+                  <View style={styles.passwordWrapper}>
+                    <TextInput
+                      style={styles.passwordInput}
+                      placeholder="Masukkan Password Lama"
+                      secureTextEntry={!showOld}
+                      value={oldPassword}
+                      onChangeText={setOldPassword}
+                    />
+                    <TouchableOpacity onPress={() => setShowOld(!showOld)}>
+                      <Ionicons
+                        name={showOld ? 'eye-outline' : 'eye-off-outline'}
+                        size={20}
+                        color="#7A7A7A"
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.passwordWrapper}>
+                    <TextInput
+                      style={styles.passwordInput}
+                      placeholder="Masukkan Password Baru"
+                      secureTextEntry={!showNew}
+                      value={newPassword}
+                      onChangeText={setNewPassword}
+                    />
+                    <TouchableOpacity onPress={() => setShowNew(!showNew)}>
+                      <Ionicons
+                        name={showNew ? 'eye-outline' : 'eye-off-outline'}
+                        size={20}
+                        color="#7A7A7A"
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.passwordWrapper}>
+                    <TextInput
+                      style={styles.passwordInput}
+                      placeholder="Konfirmasi Password Baru"
+                      secureTextEntry={!showConfirm}
+                      value={confirmPassword}
+                      onChangeText={setConfirmPassword}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowConfirm(!showConfirm)}
+                    >
+                      <Ionicons
+                        name={showConfirm ? 'eye-outline' : 'eye-off-outline'}
+                        size={20}
+                        color="#7A7A7A"
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Button Ubah Password */}
                   <TouchableOpacity
-                    onPress={() => setShowConfirm(!showConfirm)}
+                    style={[
+                      styles.button,
+                      isButtonDisabled && styles.buttonDisabled,
+                    ]}
+                    onPress={handleUpdatePassword}
+                    disabled={isButtonDisabled}
                   >
-                    <Ionicons
-                      name={showConfirm ? 'eye-outline' : 'eye-off-outline'}
-                      size={20}
-                      color="#7A7A7A"
-                    />
+                    {updating ? (
+                      <ActivityIndicator color="#FFF" />
+                    ) : (
+                      <Text style={styles.buttonText}>Ubah Password</Text>
+                    )}
                   </TouchableOpacity>
                 </View>
-
-                {/* Button Ubah Password */}
-                <TouchableOpacity
-                  style={[
-                    styles.button,
-                    isButtonDisabled && styles.buttonDisabled,
-                  ]}
-                  onPress={handleUpdatePassword}
-                  disabled={isButtonDisabled}
-                >
-                  {updating ? (
-                    <ActivityIndicator color="#FFF" />
-                  ) : (
-                    <Text style={styles.buttonText}>Ubah Password</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            )}
-          </ScrollView>
+              )}
+            </ScrollView>
+          </View>
         </KeyboardAvoidingView>
+
+        {/* BottomNavbar diletakkan paling bawah secara absolut terhadap layar */}
         <BottomNavbar />
       </View>
     </SafeAreaView>
@@ -260,19 +238,34 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   safeArea: { flex: 1, backgroundColor: '#ffffff' },
   container: { flex: 1 },
-  scrollContainer: { paddingTop: 10 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 14,
     gap: 10,
+    backgroundColor: '#fff',
   },
   headerTitle: { fontSize: 20, fontWeight: '600' },
   headerDivider: { height: 1, backgroundColor: '#D9D9D9' },
+
+  // PENGATURAN SCROLL CONTENT
+  scrollContent: {
+    paddingTop: 10,
+    // Gunakan nilai statis yang cukup untuk melewati BottomNavbar
+    // Hindari penggunaan insets.bottom di sini jika menyebabkan lonjakan layout
+    paddingBottom: 100,
+  },
+
   formContainer: { paddingHorizontal: 20, paddingTop: 20 },
   inputGroup: { marginBottom: 20 },
   label: { fontSize: 14, marginBottom: 8, color: '#7A7A7A' },
+  sectionLabel: {
+    color: '#000',
+    marginTop: 10,
+    fontWeight: '400',
+    fontSize: 14,
+  },
   input: {
     backgroundColor: '#ffffff',
     borderRadius: 10,
@@ -284,8 +277,6 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   disabledInput: { backgroundColor: '#F5F5F5', color: '#7A7A7A' },
-
-  // Style Password Baru
   passwordWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -308,9 +299,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 10,
+    // Beri sedikit jarak bawah agar tidak terlalu mepet navbar saat di-scroll mentok
+    marginBottom: 10,
   },
   buttonDisabled: {
-    backgroundColor: '#A1A1A1', // Warna abu-abu jika disable
+    backgroundColor: '#A1A1A1',
   },
   buttonText: {
     color: '#FFF',
