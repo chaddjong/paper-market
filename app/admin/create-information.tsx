@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -15,7 +15,10 @@ import {
   View,
 } from 'react-native';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import { supabase } from '../../config/supabase';
 
 import BackIcon from '../../assets/icons/arrow-left.svg';
@@ -23,18 +26,26 @@ import UploadIcon from '../../assets/icons/upload.svg';
 
 export default function CreateInformation() {
   const router = useRouter();
+  const insets = useSafeAreaInsets(); // Gunakan insets untuk akurasi posisi bawah
 
   // States
   const [image, setImage] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
-
-  // Memberikan default value pada state condition
-  const [condition, setCondition] = useState(
-    'Bagus\nRusak (robek, sebagian terbakar)(- Rp. 300/kg)',
-  );
-
+  const [rusakNote, setRusakNote] = useState('');
+  const [penaltyPrice, setPenaltyPrice] = useState('');
+  const [condition, setCondition] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const formattedNote = rusakNote ? rusakNote : 'Keterangan';
+    const formattedPenalty = penaltyPrice
+      ? `(- Rp. ${parseInt(penaltyPrice).toLocaleString('id-ID')}/kg)`
+      : '';
+
+    const finalString = `• Bagus\n• Rusak\n(${formattedNote})${formattedPenalty}`;
+    setCondition(finalString);
+  }, [rusakNote, penaltyPrice]);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -50,7 +61,7 @@ export default function CreateInformation() {
   };
 
   const handleCreate = async () => {
-    if (!image || !title || !price || !condition) {
+    if (!image || !title || !price || !rusakNote || !penaltyPrice) {
       return Alert.alert('Error', 'Harap isi semua data dan upload gambar.');
     }
 
@@ -101,9 +112,11 @@ export default function CreateInformation() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
+      {/* 1. KeyboardAvoidingView membungkus area konten utama */}
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <View style={styles.container}>
           <View style={styles.header}>
@@ -115,6 +128,7 @@ export default function CreateInformation() {
 
           <ScrollView
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.scrollContent}
           >
             <TouchableOpacity style={styles.uploadCard} onPress={pickImage}>
@@ -156,32 +170,60 @@ export default function CreateInformation() {
               <TextInput
                 style={[styles.input, styles.textArea]}
                 value={condition}
-                onChangeText={setCondition} // Admin bebas menghapus/mengganti teks harga di sini
                 multiline={true}
-                numberOfLines={4}
+                editable={false}
                 textAlignVertical="top"
-                placeholder="Deskripsikan kondisi kertas..."
-                placeholderTextColor="#9A9A9A"
               />
-              <Text style={styles.hint}>
-                *Teks di atas dapat diubah sesuai kebijakan harga.
-              </Text>
+            </View>
+
+            <View style={styles.subSection}>
+              <Text style={styles.subTitle}>Detail Kerusakan</Text>
+              <View style={styles.formGroup}>
+                <Text style={styles.subLabel}>Keterangan Rusak</Text>
+                <TextInput
+                  placeholder="Contoh: robek, sebagian terbakar"
+                  placeholderTextColor="#9A9A9A"
+                  style={styles.input}
+                  value={rusakNote}
+                  onChangeText={setRusakNote}
+                />
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.subLabel}>Nominal Penalti (Rp)</Text>
+                <TextInput
+                  placeholder="Contoh: 300"
+                  placeholderTextColor="#9A9A9A"
+                  keyboardType="numeric"
+                  style={styles.input}
+                  value={penaltyPrice}
+                  onChangeText={setPenaltyPrice}
+                />
+              </View>
             </View>
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
 
-      <TouchableOpacity
-        style={[styles.submitButton, loading && { opacity: 0.7 }]}
-        onPress={handleCreate}
-        disabled={loading}
+      {/* 2. Tombol Aksi diletakkan DI LUAR KeyboardAvoidingView 
+          agar perilakunya stabil dan kembali ke posisi semula (Flow Layout) */}
+      <View
+        style={[
+          styles.bottomContainer,
+          { paddingBottom: insets.bottom > 0 ? insets.bottom : 20 },
+        ]}
       >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.submitText}>Buat</Text>
-        )}
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.submitButton, loading && { opacity: 0.7 }]}
+          onPress={handleCreate}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.submitText}>Buat</Text>
+          )}
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -203,7 +245,11 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     color: '#333',
   },
-  scrollContent: { paddingTop: 20, paddingBottom: 120, paddingHorizontal: 4 },
+  scrollContent: {
+    paddingTop: 20,
+    paddingBottom: 40, // Padding secukupnya karena tombol sudah di luar ScrollView
+    paddingHorizontal: 4,
+  },
   previewImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   uploadCard: {
     backgroundColor: '#FFF',
@@ -222,7 +268,22 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   formGroup: { marginBottom: 18 },
-  label: { fontSize: 15, marginBottom: 8, color: '#333' },
+  label: { fontSize: 15, marginBottom: 8, color: '#333', fontWeight: '500' },
+  subTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#2F343A',
+    marginBottom: 15,
+  },
+  subLabel: { fontSize: 14, marginBottom: 6, color: '#555' },
+  subSection: {
+    marginTop: 10,
+    // padding: 15,
+    // backgroundColor: '#F9F9F9',
+    // borderRadius: 12,
+    // borderWidth: 1,
+    // borderColor: '#EEE',
+  },
   input: {
     backgroundColor: '#FFF',
     borderRadius: 10,
@@ -235,20 +296,20 @@ const styles = StyleSheet.create({
   },
   textArea: {
     minHeight: 100,
+    backgroundColor: '#FFF',
+    color: '#333',
   },
-  hint: {
-    fontSize: 11,
-    color: '#9A9A9A',
-    marginTop: 6,
-    fontStyle: 'italic',
+  // Style baru untuk container tombol agar tidak melompat
+  bottomContainer: {
+    paddingHorizontal: 50,
+    paddingTop: 5,
+    backgroundColor: '#fff',
   },
   submitButton: {
     backgroundColor: '#2F343A',
     paddingVertical: 16,
     borderRadius: 16,
     alignItems: 'center',
-    marginBottom: 50,
-    marginHorizontal: 50,
   },
   submitText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
 });

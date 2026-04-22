@@ -29,10 +29,28 @@ export default function EditInformation() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [title, setTitle] = useState('');
-  const [condition, setCondition] = useState('');
   const [price, setPrice] = useState('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [newImage, setNewImage] = useState<string | null>(null);
+
+  // States untuk part-part kondisi
+  const [rusakNote, setRusakNote] = useState('');
+  const [penaltyPrice, setPenaltyPrice] = useState('');
+  const [condition, setCondition] = useState('');
+
+  // Fungsi untuk mengekstrak data dari string condition database
+  // Format: "• Bagus\n• Rusak (keterangan)(- Rp. 300/kg)"
+  const extractConditionData = (fullString: string) => {
+    try {
+      const noteMatch = fullString.match(/\((.*?)\)\(/); // Ambil di dalam kurung pertama
+      const priceMatch = fullString.match(/Rp\.\s?([\d.]+)/); // Ambil angka setelah Rp.
+
+      if (noteMatch) setRusakNote(noteMatch[1]);
+      if (priceMatch) setPenaltyPrice(priceMatch[1].replace(/\./g, ''));
+    } catch (e) {
+      console.log('Gagal extract string kondisi');
+    }
+  };
 
   const fetchDetail = useCallback(async () => {
     try {
@@ -43,9 +61,11 @@ export default function EditInformation() {
         .single();
       if (error) throw error;
       setTitle(data.title);
-      setCondition(data.condition);
       setPrice(data.price.toString());
       setImageUrl(data.image_url);
+
+      // Extract data untuk input detail
+      extractConditionData(data.condition);
     } catch (error: any) {
       Alert.alert('Error', 'Gagal memuat data');
     } finally {
@@ -56,6 +76,17 @@ export default function EditInformation() {
   useEffect(() => {
     fetchDetail();
   }, [fetchDetail]);
+
+  // Efek Real-time Render (Sama dengan Create)
+  useEffect(() => {
+    const formattedNote = rusakNote ? rusakNote : 'Keterangan';
+    const formattedPenalty = penaltyPrice
+      ? `(- Rp. ${parseInt(penaltyPrice).toLocaleString('id-ID')}/kg)`
+      : '';
+
+    const finalString = `• Bagus\n• Rusak\n(${formattedNote})${formattedPenalty}`;
+    setCondition(finalString);
+  }, [rusakNote, penaltyPrice]);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -97,7 +128,7 @@ export default function EditInformation() {
         .from('informations')
         .update({
           title,
-          condition,
+          condition, // Kirim hasil render terbaru
           price: parseInt(price),
           image_url: finalImageUrl,
         })
@@ -140,10 +171,10 @@ export default function EditInformation() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      {/* 1. KeyboardAvoidingView membungkus Header dan ScrollView */}
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <View style={styles.container}>
           <View style={styles.header}>
@@ -155,6 +186,7 @@ export default function EditInformation() {
 
           <ScrollView
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.scrollContent}
           >
             <TouchableOpacity onPress={pickImage} style={styles.imageCard}>
@@ -189,26 +221,53 @@ export default function EditInformation() {
               />
             </View>
 
+            {/* PREVIEW KONDISI (READ ONLY) */}
             <View style={styles.formGroup}>
               <Text style={styles.label}>Kondisi Kertas</Text>
               <TextInput
-                style={[
-                  styles.input,
-                  { minHeight: 120, textAlignVertical: 'top' },
-                ]}
+                style={[styles.input, styles.textArea]}
                 value={condition}
-                onChangeText={setCondition}
                 multiline
-                placeholder="Jelaskan kondisi kertas"
+                editable={false}
+                textAlignVertical="top"
               />
+            </View>
+
+            {/* DETAIL EDITING SECTION */}
+            <View style={styles.subSection}>
+              <Text style={styles.subTitle}>Detail Kerusakan</Text>
+              <View style={styles.formGroup}>
+                <Text style={styles.subLabel}>Keterangan Rusak</Text>
+                <TextInput
+                  placeholder="Contoh: robek, sebagian terbakar"
+                  placeholderTextColor="#9A9A9A"
+                  style={styles.input}
+                  value={rusakNote}
+                  onChangeText={setRusakNote}
+                />
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.subLabel}>Nominal Penalti (Rp)</Text>
+                <TextInput
+                  placeholder="Contoh: 300"
+                  placeholderTextColor="#9A9A9A"
+                  keyboardType="numeric"
+                  style={styles.input}
+                  value={penaltyPrice}
+                  onChangeText={setPenaltyPrice}
+                />
+              </View>
             </View>
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
 
-      {/* 2. Action Buttons diletakkan DI LUAR KeyboardAvoidingView */}
-      {/* Ini akan membuat tombol terangkat tapi tetap kembali ke posisi awal karena flow layout */}
-      <View style={styles.bottomActions}>
+      <View
+        style={[
+          styles.bottomActions,
+          { paddingBottom: insets.bottom > 0 ? insets.bottom : 20 },
+        ]}
+      >
         <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
           <Text style={styles.deleteText}>Hapus</Text>
         </TouchableOpacity>
@@ -229,17 +288,9 @@ export default function EditInformation() {
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  container: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
+  flex: { flex: 1 },
+  safeArea: { flex: 1, backgroundColor: '#ffffff' },
+  container: { flex: 1, paddingHorizontal: 16 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -255,8 +306,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: 20,
-    // Sesuai contoh: paddingBottom besar agar konten tidak tertutup tombol saat di-scroll
-    paddingBottom: 120,
+    paddingBottom: 40,
     paddingHorizontal: 4,
   },
   imageCard: {
@@ -273,10 +323,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
+  image: { width: '100%', height: '100%' },
   changeOverlay: {
     position: 'absolute',
     bottom: 0,
@@ -286,13 +333,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   changeText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-  formGroup: {
-    marginBottom: 18,
+  formGroup: { marginBottom: 18 },
+  label: { fontSize: 15, marginBottom: 8, color: '#333', fontWeight: '500' },
+  subTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#2F343A',
+    marginBottom: 15,
   },
-  label: {
-    fontSize: 15,
-    marginBottom: 8,
-    color: '#333',
+  subLabel: { fontSize: 14, marginBottom: 6, color: '#555' },
+  subSection: {
+    marginTop: 10,
+    // padding: 15,
+    // backgroundColor: '#F9F9F9',
+    // borderRadius: 12,
+    // borderWidth: 1,
+    // borderColor: '#EEE',
   },
   input: {
     backgroundColor: '#FFF',
@@ -304,13 +360,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
   },
+  textArea: {
+    minHeight: 100,
+    backgroundColor: '#FFF',
+    color: '#333',
+  },
   bottomActions: {
     flexDirection: 'row',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingTop: 10,
     gap: 12,
-    // Sesuai contoh: diletakkan di bawah dengan margin
-    marginBottom: 20,
+    backgroundColor: '#fff',
   },
   deleteButton: {
     flex: 1,
@@ -320,11 +380,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
   },
-  deleteText: {
-    color: '#FF3B30',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  deleteText: { color: '#FF3B30', fontSize: 16, fontWeight: '600' },
   updateButton: {
     flex: 2,
     backgroundColor: '#2F343A',
@@ -332,9 +388,5 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
   },
-  updateText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  updateText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
 });

@@ -85,6 +85,7 @@ export default function Homepage() {
                           title: item.title,
                           price: `Rp. ${item.price.toLocaleString('id-ID')}`,
                           image: item.image_url,
+                          condition: item.condition,
                         }}
                       />
                     </View>

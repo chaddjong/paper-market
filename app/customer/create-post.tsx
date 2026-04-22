@@ -110,7 +110,7 @@ export default function CreatePost() {
       if (dbError) throw dbError;
 
       Alert.alert('Sukses', 'Postingan berhasil dibuat!');
-      router.replace('/customer/homepage');
+      router.replace('/customer/customer-items');
     } catch (error: any) {
       console.error(error);
       Alert.alert(

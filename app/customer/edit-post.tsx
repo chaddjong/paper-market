@@ -198,23 +198,23 @@ export default function EditPost() {
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.scrollContent}
           >
-            <TouchableOpacity style={styles.imageCard} onPress={pickImage}>
+            {/* 1. Gambar Dinonaktifkan (TouchableOpacity diubah jadi View atau disabled) */}
+            <View style={[styles.imageCard, { opacity: 0.9 }]}>
               <Image
                 source={{ uri: newImage || imageUrl || '' }}
                 style={styles.image}
                 resizeMode="cover"
               />
-              <View style={styles.imageOverlay}>
-                <Text style={styles.imageOverlayText}>Ganti Gambar</Text>
-              </View>
-            </TouchableOpacity>
+              {/* Overlay Ganti Gambar Dihapus agar user tahu tidak bisa ganti */}
+            </View>
 
             <View style={styles.formGroup}>
               <Text style={styles.label}>Jenis Kertas</Text>
+              {/* 2. Dropdown Dinonaktifkan */}
               <Dropdown
                 style={[
                   styles.dropdown,
-                  isFocusJenis && { borderColor: '#007AFF' },
+                  styles.disabledInput, // Tambahkan style visual disabled
                 ]}
                 placeholderStyle={styles.placeholderStyle}
                 selectedTextStyle={styles.selectedTextStyle}
@@ -222,14 +222,9 @@ export default function EditPost() {
                 maxHeight={300}
                 labelField="label"
                 valueField="value"
-                placeholder={!isFocusJenis ? 'Pilih Jenis' : '...'}
                 value={jenisKertas}
-                onFocus={() => setIsFocusJenis(true)}
-                onBlur={() => setIsFocusJenis(false)}
-                onChange={(item) => {
-                  setJenisKertas(item.value);
-                  setIsFocusJenis(false);
-                }}
+                disable={true} // Kunci dropdown
+                onChange={() => {}} // Kosongkan
               />
             </View>
 
@@ -281,7 +276,6 @@ export default function EditPost() {
         </View>
       </KeyboardAvoidingView>
 
-      {/* Action Buttons berada DI LUAR KeyboardAvoidingView agar transisi posisi lancar */}
       <View
         style={[
           styles.bottomContainer,
@@ -346,6 +340,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   image: { width: '100%', height: '100%' },
+  disabledInput: {
+    backgroundColor: '#F5F5F5', // Warna abu-abu untuk menandakan tidak bisa diedit
+    borderColor: '#E0E0E0',
+  },
   imageOverlay: {
     position: 'absolute',
     bottom: 0,

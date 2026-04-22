@@ -15,28 +15,29 @@ export default function InfoCard({ data }: any) {
         <Text style={styles.priceGreen}>{data.price}</Text> /Kg
       </Text>
 
-      <Text style={styles.desc}>Kualitas kertas :</Text>
+      {/* Judul diubah menjadi Kondisi Kertas */}
+      <Text style={styles.desc}>Kondisi kertas :</Text>
 
-      {/* Jika data.condition ada di DB, kita bisa buat dinamis, 
-          tapi jika statis sesuai desain awal tetap seperti ini: */}
-      <Text style={styles.bullet}>• Bagus</Text>
-      <Text style={styles.bullet}>• Rusak</Text>
-      <Text style={styles.bulletSmall}>
-        (robek, sebagian terbakar) (- Rp. 300/kg)
-      </Text>
+      {/* Render dinamis dari DB. 
+          Menggunakan data.condition yang berisi teks multisaluran (Bagus, Rusak, Keterangan).
+      */}
+      {data.condition ? (
+        <Text style={styles.conditionText}>{data.condition}</Text>
+      ) : (
+        <Text style={styles.bulletSmall}>Informasi kondisi tidak tersedia</Text>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    width: 160,
+    // Width diubah ke auto atau dihapus agar fleksibel dengan grid 2 kolom di Homepage
+    width: '100%',
     backgroundColor: '#ffffff',
     borderRadius: 14,
     padding: 12,
-    marginRight: 12,
-    marginLeft: 2,
-    marginTop: 1,
+    // Margin disesuaikan untuk grid
     marginBottom: 3,
     shadowColor: '#000',
     shadowOpacity: 0.1,
@@ -46,37 +47,47 @@ const styles = StyleSheet.create({
 
   image: {
     width: '100%',
-    height: 80,
-    resizeMode: 'contain',
-    marginBottom: 6,
+    height: 100, // Sedikit ditinggikan agar gambar lebih jelas
+    resizeMode: 'cover', // Menggunakan cover agar lebih rapi di layout grid
+    marginBottom: 8,
+    borderRadius: 8,
   },
 
   title: {
-    fontWeight: '600',
-    fontSize: 14,
+    fontWeight: '700',
+    fontSize: 15,
+    color: '#333',
   },
 
   price: {
     marginTop: 4,
     fontSize: 13,
+    color: '#555',
   },
 
   priceGreen: {
     color: '#3FA34D',
-    fontWeight: '600',
+    fontWeight: '700',
   },
 
   desc: {
-    marginTop: 6,
+    marginTop: 8,
     fontSize: 12,
+    fontWeight: '600',
+    color: '#444',
+    marginBottom: 2,
   },
 
-  bullet: {
-    fontSize: 12,
+  // Style baru untuk menangani teks kondisi dinamis (\n akan otomatis membuat baris baru)
+  conditionText: {
+    fontSize: 11,
+    color: '#555',
+    lineHeight: 16, // Memberi ruang antar baris agar enak dibaca
   },
 
   bulletSmall: {
     fontSize: 11,
-    color: '#555',
+    color: '#999',
+    fontStyle: 'italic',
   },
 });

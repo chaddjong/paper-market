@@ -29,6 +29,8 @@ export default function PurchaseForm() {
   const [totalKg, setTotalKg] = useState('');
   const [estimatedPrice, setEstimatedPrice] = useState(0);
 
+  const [penaltyPrice, setPenaltyPrice] = useState(0);
+
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
@@ -41,25 +43,30 @@ export default function PurchaseForm() {
 
       if (postErr) throw postErr;
       setPostData(post);
-      console.log('Data Post Ditemukan:', post.jenis_kertas);
 
       const cleanTitle = post.jenis_kertas.trim();
 
+      // Ambil price dan condition dari tabel informations
       const { data: info, error: infoErr } = await supabase
         .from('informations')
-        .select('price')
+        .select('price, condition') // Ambil kolom condition juga
         .ilike('title', `%${cleanTitle}%`);
 
-      if (infoErr) {
-        console.error('Error Info:', infoErr.message);
-      }
-
       if (info && info.length > 0) {
-        console.log('Harga Dasar Ditemukan:', info[0].price);
         setBasePrice(info[0].price);
-      } else {
-        console.warn('Harga tidak ditemukan untuk jenis:', cleanTitle);
-        setBasePrice(0);
+
+        // LOGIKA REGEX: Mencari angka setelah "Rp. " sebelum "/kg"
+        // Contoh string: "• Rusak (robek)(- Rp. 300/kg)" -> ambil 300
+        const conditionString = info[0].condition;
+        const match = conditionString.match(/Rp\.\s?([\d.]+)/);
+
+        if (match && match[1]) {
+          // Hilangkan titik jika ada (format ribuan) lalu ubah ke integer
+          const extractedPenalty = parseInt(match[1].replace(/\./g, ''));
+          setPenaltyPrice(extractedPenalty);
+        } else {
+          setPenaltyPrice(0);
+        }
       }
     } catch (error: any) {
       console.error('Error Fetch:', error.message);
@@ -82,12 +89,13 @@ export default function PurchaseForm() {
 
     let total = basePrice * kg;
 
-    if (postData.kondisi_kertas.toLowerCase() === 'rusak') {
-      total = total - 300 * kg;
+    // Gunakan penaltyPrice yang sudah dinamis
+    if (postData.kondisi_kertas.toLowerCase() === 'rusak' && penaltyPrice > 0) {
+      total = total - penaltyPrice * kg;
     }
 
     setEstimatedPrice(total > 0 ? total : 0);
-  }, [totalKg, basePrice, postData]);
+  }, [totalKg, basePrice, postData, penaltyPrice]); // Tambahkan penaltyPrice ke dependency
 
   const handleNext = () => {
     const inputKg = parseFloat(totalKg);
@@ -189,11 +197,12 @@ export default function PurchaseForm() {
                   value={postData?.kondisi_kertas}
                   editable={false}
                 />
-                {postData?.kondisi_kertas.toLowerCase() === 'rusak' && (
-                  <Text style={styles.infoText}>
-                    *Potongan Rp. 300/Kg untuk kondisi rusak
-                  </Text>
-                )}
+                {postData?.kondisi_kertas.toLowerCase() === 'rusak' &&
+                  penaltyPrice > 0 && (
+                    <Text style={styles.infoText}>
+                      {`*Potongan Rp. ${penaltyPrice.toLocaleString('id-ID')}/Kg untuk kondisi rusak`}
+                    </Text>
+                  )}
               </View>
 
               <View style={styles.priceContainer}>
