@@ -86,7 +86,7 @@ export default function UploadPaymentProof() {
         'Sukses',
         'Bukti pembayaran berhasil dikirim. Menunggu verifikasi penjual.',
       );
-      router.replace('/customer/homepage');
+      router.replace('/admin/marketplace');
     } catch (error: any) {
       Alert.alert('Gagal', error.message);
     } finally {
