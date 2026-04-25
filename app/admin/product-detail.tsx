@@ -36,13 +36,15 @@ export default function AdminProductDetail() {
       setLoading(true);
       const { data, error } = await supabase
         .from('posts')
-        .select(`
+        .select(
+          `
           *,
           users (
             nama,
             phone
           )
-        `)
+        `,
+        )
         .eq('id', id)
         .single();
 
@@ -75,7 +77,35 @@ export default function AdminProductDetail() {
     const url = `whatsapp://send?phone=${phone}&text=${encodeURIComponent(message)}`;
 
     Linking.openURL(url).catch(() => {
-      Linking.openURL(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`);
+      Linking.openURL(
+        `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
+      );
+    });
+  };
+
+  const openGoogleMaps = () => {
+    if (!product?.alamat) {
+      return Alert.alert('Error', 'Alamat tidak tersedia');
+    }
+
+    // Encode alamat agar aman untuk URL
+    const encodedAddress = encodeURIComponent(product.alamat);
+
+    // Skema URL untuk Google Maps (Bekerja di iOS & Android)
+    const url = Platform.select({
+      ios: `maps:0,0?q=${encodedAddress}`,
+      android: `geo:0,0?q=${encodedAddress}`,
+    });
+
+    // Fallback jika skema di atas gagal (buka via browser/pilihan app)
+    const browserUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+
+    Linking.canOpenURL(url!).then((supported) => {
+      if (supported) {
+        Linking.openURL(url!);
+      } else {
+        Linking.openURL(browserUrl);
+      }
     });
   };
 
@@ -120,10 +150,21 @@ export default function AdminProductDetail() {
                 Kondisi: {product.kondisi_kertas}
               </Text>
 
-              <View style={styles.locationRow}>
-                <MapIcon width={16} height={16} />
-                <Text style={styles.location}>{product.alamat}</Text>
-              </View>
+              <TouchableOpacity
+                style={styles.locationRow}
+                onPress={openGoogleMaps}
+                activeOpacity={0.7}
+              >
+                <View style={styles.mapCircle}>
+                  <MapIcon width={16} height={16} fill="#fff" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  {/* <Text style={styles.locationLabel}>
+                    Lokasi Penjemputan (Klik untuk Peta):
+                  </Text> */}
+                  <Text style={styles.locationText}>{product.alamat}</Text>
+                </View>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -224,8 +265,38 @@ const styles = StyleSheet.create({
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
-    alignSelf: 'flex-start',
+    marginTop: 15,
+    padding: 12,
+    backgroundColor: '#F5F5F5', // Beri background tipis
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    alignSelf: 'stretch', // Agar memenuhi lebar
+  },
+
+  mapCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#2F343A',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+
+  locationLabel: {
+    fontSize: 11,
+    color: '#888',
+    textTransform: 'uppercase',
+    fontWeight: '600',
+  },
+
+  locationText: {
+    marginVertical: 10,
+    fontSize: 14,
+    color: '#2F343A',
+    fontWeight: '500',
+    textDecorationLine: 'underline', // Memberi kesan link
   },
 
   location: {

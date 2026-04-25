@@ -1,25 +1,30 @@
-import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { Dropdown } from 'react-native-element-dropdown';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import {
   SafeAreaView,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import BackIcon from '../../assets/icons/arrow-left.svg';
+import MapIcon from '../../assets/icons/map.svg';
 import { supabase } from '../../config/supabase';
 
 const dataJenisKertas = [
@@ -48,10 +53,17 @@ export default function EditPost() {
   const [alamat, setAlamat] = useState('');
   const [berat, setBerat] = useState('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [newImage, setNewImage] = useState<string | null>(null);
 
-  const [isFocusJenis, setIsFocusJenis] = useState(false);
   const [isFocusKondisi, setIsFocusKondisi] = useState(false);
+
+  const [showMap, setShowMap] = useState(false);
+  const [mapLocation, setMapLocation] = useState<any>(null);
+  const [region, setRegion] = useState({
+    latitude: -1.48,
+    longitude: 124.84,
+    latitudeDelta: 0.005,
+    longitudeDelta: 0.005,
+  });
 
   const fetchDetail = useCallback(async () => {
     try {
@@ -60,9 +72,7 @@ export default function EditPost() {
         .select('*')
         .eq('id', id)
         .single();
-
       if (error) throw error;
-
       setJenisKertas(data.jenis_kertas);
       setKondisi(data.kondisi_kertas);
       setAlamat(data.alamat);
@@ -74,74 +84,71 @@ export default function EditPost() {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, router]);
 
   useEffect(() => {
     fetchDetail();
   }, [fetchDetail]);
 
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.7,
-    });
+  const getCurrentLocation = async () => {
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Izin Ditolak', 'Butuh izin lokasi untuk mengubah alamat.');
+      return;
+    }
+    setLoading(true);
+    try {
+      let currentLocation = await Location.getCurrentPositionAsync({});
+      setRegion({
+        ...region,
+        latitude: currentLocation.coords.latitude,
+        longitude: currentLocation.coords.longitude,
+      });
+      setMapLocation(currentLocation.coords);
+      setShowMap(true);
+    } catch (error) {
+      Alert.alert('Error', 'Gagal GPS.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    if (!result.canceled) {
-      setNewImage(result.assets[0].uri);
+  const handleConfirmLocation = async () => {
+    if (!mapLocation) return;
+    setLoading(true);
+    try {
+      let reverseGeocode = await Location.reverseGeocodeAsync({
+        latitude: mapLocation.latitude,
+        longitude: mapLocation.longitude,
+      });
+      if (reverseGeocode.length > 0) {
+        const addr = reverseGeocode[0];
+        const fullAddress = `${addr.street || ''} ${addr.name || ''}, ${addr.district || ''}, ${addr.city || ''}`;
+        setAlamat(fullAddress.trim());
+      }
+      setShowMap(false);
+    } catch (error) {
+      Alert.alert('Error', 'Gagal ambil alamat.');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleUpdate = async () => {
-    if (!jenisKertas || !kondisi || !alamat || !berat) {
-      return Alert.alert('Error', 'Harap lengkapi semua data.');
-    }
-
+    if (!jenisKertas || !kondisi || !alamat || !berat)
+      return Alert.alert('Error', 'Lengkapi data.');
     setUpdating(true);
     try {
-      let finalImageUrl = imageUrl;
-
-      if (newImage) {
-        const response = await fetch(newImage);
-        const blob = await response.blob();
-        const arrayBuffer = await new Response(blob).arrayBuffer();
-        const fileName = `posts/edit_${Date.now()}.jpg`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('post-images')
-          .upload(fileName, arrayBuffer, {
-            contentType: blob.type,
-            upsert: true,
-          });
-
-        if (uploadError) throw uploadError;
-
-        const { data: urlData } = supabase.storage
-          .from('post-images')
-          .getPublicUrl(fileName);
-        finalImageUrl = urlData.publicUrl;
-
-        if (imageUrl) {
-          const oldPath = imageUrl.split('post-images/')[1];
-          if (oldPath)
-            await supabase.storage.from('post-images').remove([oldPath]);
-        }
-      }
-
       const { error } = await supabase
         .from('posts')
         .update({
-          jenis_kertas: jenisKertas,
           kondisi_kertas: kondisi,
           alamat: alamat,
           berat_kg: parseFloat(berat),
-          image_url: finalImageUrl,
         })
         .eq('id', id);
-
       if (error) throw error;
-      Alert.alert('Sukses', 'Postingan diperbarui');
+      Alert.alert('Sukses', 'Diperbarui');
       router.back();
     } catch (error: any) {
       Alert.alert('Gagal', error.message);
@@ -151,41 +158,31 @@ export default function EditPost() {
   };
 
   const handleDelete = async () => {
-    Alert.alert('Hapus', 'Yakin ingin menghapus postingan Anda?', [
+    Alert.alert('Hapus', 'Yakin?', [
       { text: 'Batal' },
       {
         text: 'Hapus',
         style: 'destructive',
         onPress: async () => {
           try {
-            if (imageUrl) {
-              const filePath = imageUrl.split('post-images/')[1];
-              if (filePath)
-                await supabase.storage.from('post-images').remove([filePath]);
-            }
-            const { error } = await supabase
-              .from('posts')
-              .delete()
-              .eq('id', id);
-            if (error) throw error;
+            await supabase.from('posts').delete().eq('id', id);
             router.back();
           } catch (error: any) {
-            Alert.alert('Error', 'Gagal menghapus postingan');
+            Alert.alert('Error', 'Gagal hapus');
           }
         },
       },
     ]);
   };
 
-  if (loading) return <ActivityIndicator style={{ flex: 1 }} />;
+  if (loading) return <ActivityIndicator style={{ flex: 1 }} color="#2F343A" />;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <View style={styles.container}>
+      {/* TouchableWithoutFeedback memastikan keyboard tutup saat klik area luar */}
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.flex}>
+          {/* Header Tetap di Atas */}
           <View style={styles.header}>
             <TouchableOpacity onPress={() => router.back()}>
               <BackIcon width={22} height={22} />
@@ -193,110 +190,167 @@ export default function EditPost() {
             <Text style={styles.headerTitle}>Edit Postingan</Text>
           </View>
 
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={styles.scrollContent}
+          {/* KeyboardAvoidingView membungkus ScrollView */}
+          <KeyboardAvoidingView
+            style={styles.flex}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
           >
-            {/* 1. Gambar Dinonaktifkan (TouchableOpacity diubah jadi View atau disabled) */}
-            <View style={[styles.imageCard, { opacity: 0.9 }]}>
-              <Image
-                source={{ uri: newImage || imageUrl || '' }}
-                style={styles.image}
-                resizeMode="cover"
-              />
-              {/* Overlay Ganti Gambar Dihapus agar user tahu tidak bisa ganti */}
-            </View>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.scrollContent}
+            >
+              <View style={styles.imageCard}>
+                <Image
+                  source={{ uri: imageUrl || '' }}
+                  style={styles.image}
+                  resizeMode="cover"
+                />
+              </View>
 
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Jenis Kertas</Text>
-              {/* 2. Dropdown Dinonaktifkan */}
-              <Dropdown
-                style={[
-                  styles.dropdown,
-                  styles.disabledInput, // Tambahkan style visual disabled
-                ]}
-                placeholderStyle={styles.placeholderStyle}
-                selectedTextStyle={styles.selectedTextStyle}
-                data={dataJenisKertas}
-                maxHeight={300}
-                labelField="label"
-                valueField="value"
-                value={jenisKertas}
-                disable={true} // Kunci dropdown
-                onChange={() => {}} // Kosongkan
-              />
-            </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Jenis Kertas</Text>
+                <Dropdown
+                  style={[styles.dropdown, styles.disabledInput]}
+                  data={dataJenisKertas}
+                  labelField="label"
+                  valueField="value"
+                  value={jenisKertas}
+                  disable={true}
+                  onChange={() => {}}
+                />
+              </View>
 
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Kondisi Kertas</Text>
-              <Dropdown
-                style={[
-                  styles.dropdown,
-                  isFocusKondisi && { borderColor: '#007AFF' },
-                ]}
-                placeholderStyle={styles.placeholderStyle}
-                selectedTextStyle={styles.selectedTextStyle}
-                data={dataKondisiKertas}
-                maxHeight={300}
-                labelField="label"
-                valueField="value"
-                placeholder={!isFocusKondisi ? 'Pilih Kondisi' : '...'}
-                value={kondisi}
-                onFocus={() => setIsFocusKondisi(true)}
-                onBlur={() => setIsFocusKondisi(false)}
-                onChange={(item) => {
-                  setKondisi(item.value);
-                  setIsFocusKondisi(false);
-                }}
-              />
-            </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Kondisi Kertas</Text>
+                <Dropdown
+                  style={[
+                    styles.dropdown,
+                    isFocusKondisi && { borderColor: '#007AFF' },
+                  ]}
+                  data={dataKondisiKertas}
+                  labelField="label"
+                  valueField="value"
+                  placeholder="Pilih Kondisi"
+                  value={kondisi}
+                  onFocus={() => setIsFocusKondisi(true)}
+                  onBlur={() => setIsFocusKondisi(false)}
+                  onChange={(item) => {
+                    setKondisi(item.value);
+                    setIsFocusKondisi(false);
+                  }}
+                />
+              </View>
 
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Alamat</Text>
-              <TextInput
-                style={styles.input}
-                value={alamat}
-                onChangeText={setAlamat}
-                placeholder="Alamat penjemputan"
-              />
-            </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Alamat Penjemputan</Text>
+                <View style={styles.locationInputWrapper}>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      styles.readOnlyInput,
+                      { flex: 1, minHeight: 50 },
+                    ]}
+                    value={alamat}
+                    editable={false}
+                    multiline
+                  />
+                  <TouchableOpacity
+                    style={styles.mapButton}
+                    onPress={getCurrentLocation}
+                  >
+                    <MapIcon width={22} height={22} />
+                  </TouchableOpacity>
+                </View>
+              </View>
 
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Total Berat (Kg)</Text>
-              <TextInput
-                style={styles.input}
-                value={berat}
-                onChangeText={setBerat}
-                keyboardType="numeric"
-                placeholder="Contoh: 10"
-              />
-            </View>
-          </ScrollView>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Total Berat (Kg)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={berat}
+                  onChangeText={setBerat}
+                  keyboardType="numeric"
+                  placeholder="Contoh: 10"
+                />
+              </View>
+
+              {/* Padding tambahan bawah scroll agar input terakhir tidak mepet keyboard */}
+              <View style={{ height: 20 }} />
+            </ScrollView>
+          </KeyboardAvoidingView>
+
+          {/* Action Button berada di luar KeyboardAvoidingView 
+              ini menjamin posisi tetap di bawah saat keyboard tertutup */}
+          <View
+            style={[
+              styles.bottomActionContainer,
+              {
+                // Menambahkan offset ekstra agar tidak tertutup navigasi HP
+                paddingBottom:
+                  Platform.OS === 'ios'
+                    ? Math.max(insets.bottom, 20) + 10
+                    : insets.bottom + 10,
+              },
+            ]}
+          >
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={handleDelete}
+            >
+              <Text style={styles.deleteText}>Hapus</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.updateButton, updating && { opacity: 0.7 }]}
+              onPress={handleUpdate}
+              disabled={updating}
+            >
+              {updating ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.updateText}>Simpan</Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
-      </KeyboardAvoidingView>
+      </TouchableWithoutFeedback>
 
-      <View
-        style={[
-          styles.bottomContainer,
-          { paddingBottom: insets.bottom > 0 ? insets.bottom : 20 },
-        ]}
-      >
-        <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-          <Text style={styles.deleteText}>Hapus</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.updateButton, updating && { opacity: 0.7 }]}
-          onPress={handleUpdate}
-          disabled={updating}
-        >
-          {updating ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.updateText}>Perbarui</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+      {/* Modal Map */}
+      <Modal visible={showMap} animationType="slide">
+        <View style={styles.modalContainer}>
+          <View style={styles.mapHeader}>
+            <Text style={styles.mapTitle}>Geser Peta ke Lokasi Baru</Text>
+            <TouchableOpacity onPress={() => setShowMap(false)}>
+              <Text style={styles.closeMap}>Batal</Text>
+            </TouchableOpacity>
+          </View>
+          <MapView
+            style={styles.map}
+            provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+            initialRegion={region}
+            onRegionChangeComplete={(r) => {
+              setRegion(r);
+              setMapLocation({ latitude: r.latitude, longitude: r.longitude });
+            }}
+          >
+            <Marker
+              coordinate={{
+                latitude: region.latitude,
+                longitude: region.longitude,
+              }}
+            />
+          </MapView>
+          <View style={styles.mapFooter}>
+            <TouchableOpacity
+              style={styles.confirmMapButton}
+              onPress={handleConfirmLocation}
+            >
+              <Text style={styles.confirmMapText}>Konfirmasi Lokasi</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -304,13 +358,15 @@ export default function EditPost() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   safeArea: { flex: 1, backgroundColor: '#ffffff' },
-  container: { flex: 1, paddingHorizontal: 16 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
+    backgroundColor: '#fff',
+    zIndex: 10,
   },
   headerTitle: {
     fontSize: 18,
@@ -320,11 +376,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: 20,
-    paddingBottom: 100, // Memberi ruang agar input terbawah bisa di-scroll melewati tombol
-    paddingHorizontal: 4,
+    paddingHorizontal: 16,
+    paddingBottom: 40, // Ditingkatkan agar ada ruang saat scroll
   },
   imageCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: '#F5F5F5',
     borderRadius: 14,
     height: 180,
     justifyContent: 'center',
@@ -333,28 +389,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#eee',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   image: { width: '100%', height: '100%' },
-  disabledInput: {
-    backgroundColor: '#F5F5F5', // Warna abu-abu untuk menandakan tidak bisa diedit
-    borderColor: '#E0E0E0',
-  },
-  imageOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  imageOverlayText: { color: '#fff', fontSize: 12, fontWeight: '600' },
   formGroup: { marginBottom: 18 },
-  label: { fontSize: 15, marginBottom: 8, color: '#333' },
+  label: { fontSize: 15, marginBottom: 8, color: '#333', fontWeight: '500' },
   input: {
     backgroundColor: '#fff',
     borderRadius: 10,
@@ -363,25 +401,39 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#DADADA',
     fontSize: 14,
-    color: '#333',
+    color: '#000',
   },
+  disabledInput: { backgroundColor: '#F5F5F5', borderColor: '#E0E0E0' },
+  readOnlyInput: { backgroundColor: '#F9F9F9', color: '#555' },
   dropdown: {
     height: 50,
     borderColor: '#DADADA',
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 14,
-    backgroundColor: '#FFF',
   },
-  placeholderStyle: { fontSize: 14, color: '#9A9A9A' },
-  selectedTextStyle: { fontSize: 14, color: '#333' },
-  bottomContainer: {
+  locationInputWrapper: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'flex-start',
+  },
+  mapButton: {
+    backgroundColor: '#F5F5F5',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#DADADA',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bottomActionContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: 15,
     backgroundColor: '#fff',
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: '#F0F0F0',
+    gap: 12,
   },
   deleteButton: {
     flex: 1,
@@ -390,7 +442,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
-    marginRight: 8,
   },
   deleteText: { color: '#FF3B30', fontSize: 16, fontWeight: '600' },
   updateButton: {
@@ -399,7 +450,25 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
-    marginLeft: 8,
   },
   updateText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
+  modalContainer: { flex: 1 },
+  map: { flex: 1 },
+  mapHeader: {
+    padding: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    paddingTop: 50,
+  },
+  mapTitle: { fontSize: 16, fontWeight: '600' },
+  closeMap: { color: 'red', fontWeight: '500' },
+  mapFooter: { position: 'absolute', bottom: 40, left: 20, right: 20 },
+  confirmMapButton: {
+    backgroundColor: '#2F343A',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  confirmMapText: { color: '#fff', fontWeight: '600' },
 });

@@ -1,4 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -6,6 +7,7 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -14,16 +16,19 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-// IMPORT DROPDOWN
 import { Dropdown } from 'react-native-element-dropdown';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 import BackIcon from '../../assets/icons/arrow-left.svg';
+import MapIcon from '../../assets/icons/map.svg';
 import UploadIcon from '../../assets/icons/upload.svg';
 import { supabase } from '../../config/supabase';
 import { useAuth } from '../../context/AuthContext';
 
-// Data untuk dropdown sesuai gambar
 const dataJenisKertas = [
   { label: 'Majalah', value: 'Majalah' },
   { label: 'Kertas HVS', value: 'Kertas HVS' },
@@ -40,9 +45,10 @@ const dataKondisiKertas = [
 export default function CreatePost() {
   const router = useRouter();
   const { user } = useAuth();
+  const insets = useSafeAreaInsets(); // Untuk menangani jarak tombol navigasi HP
 
   const [image, setImage] = useState<string | null>(null);
-  const [jenisKertas, setJenisKertas] = useState(''); // State ini akan menampung value dropdown
+  const [jenisKertas, setJenisKertas] = useState('');
   const [kondisiKertas, setKondisiKertas] = useState('');
   const [alamat, setAlamat] = useState('');
   const [berat, setBerat] = useState('');
@@ -50,7 +56,65 @@ export default function CreatePost() {
   const [isFocus, setIsFocus] = useState(false);
   const [isFocusKondisi, setIsFocusKondisi] = useState(false);
 
-  // ... fungsi pickImage dan handleSubmit tetap sama ...
+  const [showMap, setShowMap] = useState(false);
+  const [location, setLocation] = useState<any>(null);
+  const [region, setRegion] = useState({
+    latitude: -1.48,
+    longitude: 124.84,
+    latitudeDelta: 0.005,
+    longitudeDelta: 0.005,
+  });
+
+  const getCurrentLocation = async () => {
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Izin Ditolak',
+        'Aplikasi butuh izin lokasi untuk memilih alamat.',
+      );
+      return;
+    }
+
+    setLoading(true);
+    try {
+      let currentLocation = await Location.getCurrentPositionAsync({});
+      const newRegion = {
+        ...region,
+        latitude: currentLocation.coords.latitude,
+        longitude: currentLocation.coords.longitude,
+      };
+      setRegion(newRegion);
+      setLocation(currentLocation.coords);
+      setShowMap(true);
+    } catch (error) {
+      Alert.alert('Error', 'Gagal mendapatkan lokasi GPS.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmLocation = async () => {
+    if (!location) return;
+    setLoading(true);
+    try {
+      let reverseGeocode = await Location.reverseGeocodeAsync({
+        latitude: location.latitude,
+        longitude: location.longitude,
+      });
+
+      if (reverseGeocode.length > 0) {
+        const addr = reverseGeocode[0];
+        const fullAddress = `${addr.street || ''} ${addr.name || ''}, ${addr.district || ''}, ${addr.city || ''}`;
+        setAlamat(fullAddress.trim());
+      }
+      setShowMap(false);
+    } catch (error) {
+      Alert.alert('Error', 'Gagal mendapatkan teks alamat.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -58,15 +122,12 @@ export default function CreatePost() {
       aspect: [4, 3],
       quality: 0.7,
     });
-
-    if (!result.canceled) {
-      setImage(result.assets[0].uri);
-    }
+    if (!result.canceled) setImage(result.assets[0].uri);
   };
 
   const handleSubmit = async () => {
     if (!image || !jenisKertas || !kondisiKertas || !alamat || !berat) {
-      Alert.alert('Error', 'Harap lengkapi semua data dan foto.');
+      Alert.alert('Error', 'Harap lengkapi semua data.');
       return;
     }
 
@@ -75,12 +136,11 @@ export default function CreatePost() {
       const response = await fetch(image);
       const blob = await response.blob();
       const arrayBuffer = await new Response(blob).arrayBuffer();
-
       const fileExt = image.split('.').pop();
       const fileName = `${user?.id}_${Date.now()}.${fileExt}`;
       const filePath = `posts/${fileName}`;
 
-      const { data: storageData, error: storageError } = await supabase.storage
+      const { error: storageError } = await supabase.storage
         .from('post-images')
         .upload(filePath, arrayBuffer, {
           contentType: blob.type,
@@ -93,12 +153,10 @@ export default function CreatePost() {
         .from('post-images')
         .getPublicUrl(filePath);
 
-      const publicUrl = urlData.publicUrl;
-
       const { error: dbError } = await supabase.from('posts').insert([
         {
           user_id: user?.id,
-          image_url: publicUrl,
+          image_url: urlData.publicUrl,
           jenis_kertas: jenisKertas,
           kondisi_kertas: kondisiKertas,
           alamat: alamat,
@@ -112,17 +170,14 @@ export default function CreatePost() {
       Alert.alert('Sukses', 'Postingan berhasil dibuat!');
       router.replace('/customer/customer-items');
     } catch (error: any) {
-      console.error(error);
-      Alert.alert(
-        'Gagal',
-        error.message || 'Terjadi kesalahan saat mengunggah.',
-      );
+      Alert.alert('Gagal', error.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
+    // Gunakan edges top saja, bagian bottom ditangani oleh insets manual
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <KeyboardAvoidingView
         style={styles.flex}
@@ -153,18 +208,12 @@ export default function CreatePost() {
 
             <View style={styles.formGroup}>
               <Text style={styles.label}>Jenis Kertas</Text>
-              {/* DROPDOWN COMPONENT */}
               <Dropdown
                 style={[styles.dropdown, isFocus && { borderColor: '#007AFF' }]}
-                placeholderStyle={styles.placeholderStyle}
-                selectedTextStyle={styles.selectedTextStyle}
-                inputSearchStyle={styles.inputSearchStyle}
-                iconStyle={styles.iconStyle}
                 data={dataJenisKertas}
-                maxHeight={300}
                 labelField="label"
                 valueField="value"
-                placeholder={!isFocus ? 'Pilih Jenis Kertas' : '...'}
+                placeholder="Pilih Jenis Kertas"
                 value={jenisKertas}
                 onFocus={() => setIsFocus(true)}
                 onBlur={() => setIsFocus(false)}
@@ -175,7 +224,6 @@ export default function CreatePost() {
               />
             </View>
 
-            {/* Input lainnya tetap sama */}
             <View style={styles.formGroup}>
               <Text style={styles.label}>Kondisi Kertas</Text>
               <Dropdown
@@ -183,13 +231,10 @@ export default function CreatePost() {
                   styles.dropdown,
                   isFocusKondisi && { borderColor: '#007AFF' },
                 ]}
-                placeholderStyle={styles.placeholderStyle}
-                selectedTextStyle={styles.selectedTextStyle}
                 data={dataKondisiKertas}
-                maxHeight={300}
                 labelField="label"
                 valueField="value"
-                placeholder={!isFocusKondisi ? 'Pilih Kondisi Kertas' : '...'}
+                placeholder="Pilih Kondisi Kertas"
                 value={kondisiKertas}
                 onFocus={() => setIsFocusKondisi(true)}
                 onBlur={() => setIsFocusKondisi(false)}
@@ -201,18 +246,31 @@ export default function CreatePost() {
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Alamat</Text>
-              <TextInput
-                placeholder="Deskripsi Tempat Tinggal"
-                placeholderTextColor="#9A9A9A"
-                style={styles.input}
-                value={alamat}
-                onChangeText={setAlamat}
-              />
+              <Text style={styles.label}>Alamat Penjemputan</Text>
+              <View style={styles.locationInputWrapper}>
+                <TextInput
+                  placeholder="Klik ikon map untuk pilih lokasi"
+                  placeholderTextColor="#9A9A9A"
+                  style={[
+                    styles.input,
+                    styles.disabledInput,
+                    { flex: 1, minHeight: 50 },
+                  ]}
+                  value={alamat}
+                  editable={false} // MENONAKTIFKAN KETIK MANUAL
+                  multiline
+                />
+                <TouchableOpacity
+                  style={styles.mapButton}
+                  onPress={getCurrentLocation}
+                >
+                  <MapIcon width={22} height={22} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Total Berat Kilogram</Text>
+              <Text style={styles.label}>Total Berat (Kg)</Text>
               <TextInput
                 placeholder="Contoh: 10"
                 placeholderTextColor="#9A9A9A"
@@ -226,23 +284,69 @@ export default function CreatePost() {
         </View>
       </KeyboardAvoidingView>
 
-      <TouchableOpacity
-        style={[styles.submitButton, loading && { opacity: 0.7 }]}
-        onPress={handleSubmit}
-        disabled={loading}
+      {/* Button diletakkan di luar KeyboardAvoidingView namun di dalam SafeAreaView logic */}
+      <View
+        style={[
+          styles.bottomActionContainer,
+          {
+            // Kita tambahkan ekstra padding agar lebih tinggi dari navigasi HP
+            paddingBottom: Platform.OS === 'ios' ? insets.bottom : 35,
+            paddingTop: 15,
+          },
+        ]}
       >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.submitText}>Kirim Postingan</Text>
-        )}
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.submitButton, loading && { opacity: 0.7 }]}
+          onPress={handleSubmit}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.submitText}>Kirim Postingan</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      <Modal visible={showMap} animationType="slide">
+        <View style={styles.modalContainer}>
+          <View style={styles.mapHeader}>
+            <Text style={styles.mapTitle}>Geser Peta ke Lokasi Anda</Text>
+            <TouchableOpacity onPress={() => setShowMap(false)}>
+              <Text style={styles.closeMap}>Batal</Text>
+            </TouchableOpacity>
+          </View>
+          <MapView
+            style={styles.map}
+            provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+            initialRegion={region}
+            onRegionChangeComplete={(r) => {
+              setRegion(r);
+              setLocation({ latitude: r.latitude, longitude: r.longitude });
+            }}
+          >
+            <Marker
+              coordinate={{
+                latitude: region.latitude,
+                longitude: region.longitude,
+              }}
+            />
+          </MapView>
+          <View style={styles.mapFooter}>
+            <TouchableOpacity
+              style={styles.confirmMapButton}
+              onPress={handleConfirmLocation}
+            >
+              <Text style={styles.confirmMapText}>Konfirmasi Lokasi Ini</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  // ... Styles lama Anda tetap ada, tambahkan style berikut:
   flex: { flex: 1 },
   safeArea: { flex: 1, backgroundColor: '#ffffff' },
   container: { flex: 1, paddingHorizontal: 16 },
@@ -259,26 +363,27 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     color: '#333',
   },
-  scrollContent: { paddingTop: 20, paddingBottom: 120, paddingHorizontal: 4 },
-  previewImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  scrollContent: { paddingTop: 20, paddingBottom: 50 },
+  previewImage: {
+    width: '100%',
+    height: 180,
+    borderRadius: 14,
+    resizeMode: 'cover',
+  },
   uploadCard: {
     backgroundColor: '#FFF',
     borderRadius: 14,
-    paddingVertical: 60,
+    paddingVertical: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    flexDirection: 'row',
-    gap: 10,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#DADADA',
+    borderStyle: 'dashed',
     marginBottom: 24,
   },
-  uploadText: {
-    fontSize: 16,
-    textDecorationLine: 'underline',
-    fontWeight: '500',
-  },
+  uploadText: { fontSize: 14, color: '#666', marginTop: 8 },
   formGroup: { marginBottom: 18 },
-  label: { fontSize: 15, marginBottom: 8, color: '#333' },
+  label: { fontSize: 15, marginBottom: 8, color: '#333', fontWeight: '500' },
   input: {
     backgroundColor: '#FFF',
     borderRadius: 10,
@@ -287,40 +392,61 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#DADADA',
     fontSize: 14,
+    color: '#000',
   },
-  submitButton: {
-    backgroundColor: '#2F343A',
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: 'center',
-    marginBottom: 50,
-    marginHorizontal: 50,
+  disabledInput: {
+    backgroundColor: '#F9F9F9', // Menandakan bahwa ini tidak bisa diketik
+    color: '#555',
   },
-  submitText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
-
-  // STYLE BARU UNTUK DROPDOWN
   dropdown: {
     height: 50,
     borderColor: '#DADADA',
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 14,
-    backgroundColor: '#FFF',
   },
-  placeholderStyle: {
-    fontSize: 14,
-    color: '#9A9A9A',
+  locationInputWrapper: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'flex-start',
   },
-  selectedTextStyle: {
-    fontSize: 14,
-    color: '#333',
+  mapButton: {
+    backgroundColor: '#F5F5F5',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#DADADA',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  iconStyle: {
-    width: 20,
-    height: 20,
+  bottomActionContainer: {
+    paddingHorizontal: 30,
+    backgroundColor: '#fff', // Menutup konten scroll saat keyboard muncul
   },
-  inputSearchStyle: {
-    height: 40,
-    fontSize: 14,
+  submitButton: {
+    backgroundColor: '#2F343A',
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
   },
+  submitText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
+  modalContainer: { flex: 1 },
+  map: { flex: 1 },
+  mapHeader: {
+    padding: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    paddingTop: 50,
+  },
+  mapTitle: { fontSize: 16, fontWeight: '600' },
+  closeMap: { color: 'red', fontWeight: '500' },
+  mapFooter: { position: 'absolute', bottom: 40, left: 20, right: 20 },
+  confirmMapButton: {
+    backgroundColor: '#2F343A',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  confirmMapText: { color: '#fff', fontWeight: '600' },
 });
