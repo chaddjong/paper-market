@@ -63,19 +63,44 @@ export default function AccountDetailsScreen() {
   };
 
   const handleUpdatePassword = async () => {
+    // 1. Validasi Input Dasar (Instan)
     if (newPassword !== confirmPassword) {
       Alert.alert('Error', 'Konfirmasi password baru tidak cocok');
       return;
     }
 
+    if (newPassword.length < 6) {
+      Alert.alert('Error', 'Password baru minimal 6 karakter');
+      return;
+    }
+
+    // Mulai loading dan hitungan 10 detik tepat saat tombol ditekan
     setUpdating(true);
 
     try {
+      // 2. Verifikasi Password Lama (Wajib ditunggu karena penentu boleh lanjut/tidak)
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user?.email as string,
+        password: oldPassword,
+      });
+
+      if (signInError) {
+        setUpdating(false);
+        Alert.alert('Gagal', 'Password lama yang Anda masukkan salah.');
+        return;
+      }
+
+      // 3. Trigger Update Password (TIDAK PAKAI AWAIT)
+      // Kita "tembak" perintahnya ke server, lalu biarkan berjalan di background
       supabase.auth.updateUser({ password: newPassword });
 
+      // 4. Timer 10 Detik Pasti
+      // Ini akan berjalan terlepas dari berapa lama server merespon
       setTimeout(() => {
         setUpdating(false);
         Alert.alert('Sukses', 'Permintaan perubahan password telah diproses.');
+
+        // Reset Form & Placeholder
         setOldPassword('');
         setNewPassword('');
         setConfirmPassword('');
@@ -85,7 +110,10 @@ export default function AccountDetailsScreen() {
       }, 10000);
     } catch (error: any) {
       setUpdating(false);
-      Alert.alert('Info', 'Pastikan koneksi internet Anda stabil.');
+      Alert.alert(
+        'Info',
+        'Terjadi kesalahan. Pastikan koneksi internet stabil.',
+      );
     }
   };
 

@@ -189,7 +189,7 @@ export default function CreateInformation() {
                 />
               </View>
               <View style={styles.formGroup}>
-                <Text style={styles.subLabel}>Nominal Penalti (Rp)</Text>
+                <Text style={styles.subLabel}>Nominal Potongan (Rp)</Text>
                 <TextInput
                   placeholder="Contoh: 300"
                   placeholderTextColor="#9A9A9A"

@@ -221,7 +221,6 @@ export default function EditInformation() {
               />
             </View>
 
-            {/* PREVIEW KONDISI (READ ONLY) */}
             <View style={styles.formGroup}>
               <Text style={styles.label}>Kondisi Kertas</Text>
               <TextInput
@@ -233,7 +232,6 @@ export default function EditInformation() {
               />
             </View>
 
-            {/* DETAIL EDITING SECTION */}
             <View style={styles.subSection}>
               <Text style={styles.subTitle}>Detail Kerusakan</Text>
               <View style={styles.formGroup}>
@@ -247,7 +245,7 @@ export default function EditInformation() {
                 />
               </View>
               <View style={styles.formGroup}>
-                <Text style={styles.subLabel}>Nominal Penalti (Rp)</Text>
+                <Text style={styles.subLabel}>Nominal Potongan (Rp)</Text>
                 <TextInput
                   placeholder="Contoh: 300"
                   placeholderTextColor="#9A9A9A"
