@@ -87,7 +87,7 @@ export default function NotificationScreen() {
                   title={
                     isVerified
                       ? 'Transaksi selesai'
-                      : 'Pembayaran telah dilakukan'
+                      : 'Pembayaran yang diterima'
                   }
                   description={
                     isVerified

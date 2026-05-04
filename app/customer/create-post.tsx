@@ -167,8 +167,20 @@ export default function CreatePost() {
 
       if (dbError) throw dbError;
 
-      Alert.alert('Sukses', 'Postingan berhasil dibuat!');
-      router.replace('/customer/customer-items');
+      Alert.alert('Sukses', 'Postingan berhasil dibuat!', [
+        {
+          text: 'OK',
+          onPress: () => {
+            // Menampilkan alert kedua setelah alert pertama ditutup
+            Alert.alert('Info', 'Terima kasih atas tawarannya!', [
+              {
+                text: 'Sama-sama',
+                onPress: () => router.replace('/customer/customer-items'),
+              },
+            ]);
+          },
+        },
+      ]);
     } catch (error: any) {
       Alert.alert('Gagal', error.message);
     } finally {
