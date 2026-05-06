@@ -17,23 +17,52 @@ export default function PaymentSuccessScreen() {
   const { id } = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<any>(null);
+  const [basePrice, setBasePrice] = useState(0);
 
   useEffect(() => {
     const fetchDetail = async () => {
-      // Ambil data langsung dari tabel transactions (tidak perlu join posts)
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('*, buyer:buyer_id(nama)')
-        .eq('id', id)
-        .single();
+      try {
+        setLoading(true);
+        // Ambil data dari tabel transactions
+        const { data, error } = await supabase
+          .from('transactions')
+          .select('*, buyer:buyer_id(nama)')
+          .eq('id', id)
+          .single();
 
-      if (!error) setDetail(data);
-      setLoading(false);
+        if (error) throw error;
+        setDetail(data);
+
+        // Ambil harga dasar dari tabel informations berdasarkan product_name (jenis kertas)
+        // Kita gunakan ilike agar pencarian teks lebih fleksibel
+        if (data?.product_name) {
+          const { data: infoData } = await supabase
+            .from('informations')
+            .select('price')
+            .ilike('title', `%${data.product_name}%`)
+            .single();
+
+          if (infoData) {
+            setBasePrice(infoData.price);
+          }
+        }
+      } catch (error: any) {
+        console.error('Error:', error.message);
+      } finally {
+        setLoading(false);
+      }
     };
-    fetchDetail();
+
+    if (id) fetchDetail();
   }, [id]);
 
-  if (loading) return <ActivityIndicator style={{ flex: 1 }} />;
+  // Rumus: Total Harga / Harga per Kg
+  const calculatedKg =
+    detail?.total_price && basePrice > 0
+      ? Math.round(detail.total_price / basePrice)
+      : 0;
+
+  if (loading) return <ActivityIndicator style={{ flex: 1 }} color="#2F343A" />;
 
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
@@ -57,8 +86,18 @@ export default function PaymentSuccessScreen() {
               <Image
                 source={{ uri: detail?.payment_proof_url }}
                 style={styles.image}
-                resizeMode="contain"
+                resizeMode="cover"
               />
+            </View>
+          </View>
+
+          {/* TOTAL PENJUALAN (KG) */}
+          <View style={styles.infoGroup}>
+            <Text style={styles.label}>Total Penjualan</Text>
+            <View style={styles.disabledPlaceholder}>
+              <Text style={styles.placeholderText}>
+                {calculatedKg > 0 ? `${calculatedKg} Kg` : 'Menghitung...'}
+              </Text>
             </View>
           </View>
 
@@ -94,7 +133,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    // justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
@@ -109,10 +147,6 @@ const styles = StyleSheet.create({
     color: '#333',
   },
 
-  placeholder: {
-    width: 22,
-  },
-
   /* CONTENT */
   content: {
     flex: 1,
@@ -125,12 +159,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     marginBottom: 16,
+    color: '#333',
   },
 
   sectionTitle: {
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
+    color: '#333',
   },
 
   imageWrapper: {
@@ -141,12 +177,34 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#eee',
   },
 
   image: {
     width: '100%',
     height: 200,
-    resizeMode: 'cover',
+  },
+
+  /* INFO KG (NEW) */
+  infoGroup: {
+    marginBottom: 20,
+  },
+
+  disabledPlaceholder: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#D6D6D6',
+    marginTop: 6,
+  },
+
+  placeholderText: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '600',
   },
 
   /* PRICE */
@@ -160,30 +218,10 @@ const styles = StyleSheet.create({
   },
 
   finalPrice: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     color: '#28A745',
     marginTop: 4,
-  },
-
-  /* ALERT */
-  alertBox: {
-    flexDirection: 'row',
-    backgroundColor: '#FFE9E9',
-    padding: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-
-  alertIcon: {
-    marginRight: 8,
-    fontWeight: '700',
-  },
-
-  alertText: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 13,
   },
 
   /* BUTTON */
@@ -195,7 +233,7 @@ const styles = StyleSheet.create({
   },
 
   buttonDisabled: {
-    backgroundColor: '#BDBDBD', // abu-abu = disabled
+    backgroundColor: '#BDBDBD',
     paddingVertical: 14,
     alignItems: 'center',
     borderRadius: 10,

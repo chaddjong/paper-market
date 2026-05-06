@@ -43,19 +43,26 @@ export default function AdminTransactionDetailScreen() {
       if (error) throw error;
       setDetail(data);
 
-      // Ambil harga dasar dari tabel informations berdasarkan jenis kertas
-      if (data?.posts?.jenis_kertas) {
-        const { data: infoData } = await supabase
+      // --- PERBAIKAN LOGIKA DISINI ---
+      // Gunakan data.product_name (kolom permanen) jika posts sudah dihapus
+      const namaKertas = data.product_name || data?.posts?.jenis_kertas;
+
+      if (namaKertas) {
+        const { data: infoData, error: infoError } = await supabase
           .from('informations')
           .select('price')
-          .ilike('title', `%${data.posts.jenis_kertas}%`)
+          // Menggunakan namaKertas yang sudah dipastikan ada isinya
+          .ilike('title', `%${namaKertas}%`)
           .single();
 
         if (infoData) {
           setBasePrice(infoData.price);
+        } else {
+          console.warn('Harga tidak ditemukan untuk:', namaKertas);
         }
       }
     } catch (error: any) {
+      console.error('Fetch Detail Error:', error.message);
       Alert.alert('Error', error.message);
     } finally {
       setLoading(false);
