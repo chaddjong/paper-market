@@ -8,11 +8,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import { supabase } from '../../config/supabase';
 
-import AdminHistoryCard from '../admin/components/AdminHistoryCard';
 import BackIcon from '../../assets/icons/arrow-left.svg';
+import AdminHistoryCard from '../admin/components/AdminHistoryCard';
 
 export default function AdminHistoryScreen() {
   const router = useRouter();
@@ -47,7 +50,10 @@ export default function AdminHistoryScreen() {
       <View style={styles.container}>
         {/* HEADER */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+          >
             <BackIcon width={22} height={22} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>List Pembelian Kertas</Text>
@@ -63,17 +69,17 @@ export default function AdminHistoryScreen() {
             renderItem={({ item }) => (
               <AdminHistoryCard
                 data={{
-                  productName: item.product_name, // Mengambil dari kolom permanen
+                  productName: item.product_name,
                   date: new Date(item.created_at).toLocaleDateString('id-ID'),
-                  image: item.product_image, // Mengambil dari kolom permanen
+                  image: item.product_image,
                 }}
-                // onPress={() => {
-                //   // Arahkan ke detail transaksi jika diperlukan
-                //   router.push({
-                //     pathname: '/admin/transaction-detail',
-                //     params: { id: item.id },
-                //   });
-                // }}
+                // AKTIFKAN ONPRESS DI SINI
+                onPress={() => {
+                  router.push({
+                    pathname: '/admin/admin-history', // Pastikan path ini sesuai dengan lokasi file detail admin Anda
+                    params: { id: item.id },
+                  });
+                }}
               />
             )}
             ListEmptyComponent={

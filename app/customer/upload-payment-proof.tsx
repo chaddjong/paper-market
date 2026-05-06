@@ -108,6 +108,7 @@ export default function UploadPaymentProof() {
             <Text style={styles.headerTitle}>Upload Bukti</Text>
           </View>
 
+          {/* Card Upload */}
           <TouchableOpacity style={styles.uploadCard} onPress={pickImage}>
             {image ? (
               <Image source={{ uri: image }} style={styles.previewImage} />
@@ -118,6 +119,13 @@ export default function UploadPaymentProof() {
               </>
             )}
           </TouchableOpacity>
+
+          {/* Label Instruksi Baru */}
+          <View style={styles.instructionBox}>
+            <Text style={styles.instructionText}>
+              Upload Bukti Transfer atau Nota
+            </Text>
+          </View>
         </View>
       </KeyboardAvoidingView>
 
@@ -176,13 +184,12 @@ const styles = StyleSheet.create({
     height: 160,
     justifyContent: 'center',
     alignItems: 'center',
-
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 6,
     elevation: 3,
-
     flexDirection: 'row',
+    overflow: 'hidden',
   },
 
   uploadText: {
@@ -193,13 +200,32 @@ const styles = StyleSheet.create({
     color: '#333',
   },
 
+  instructionBox: {
+    marginTop: 16,
+    backgroundColor: '#F5F5F5',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+
+  instructionText: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
+  },
+
   bottomContainer: {
     marginTop: 'auto',
     marginBottom: 50,
     marginHorizontal: 50,
   },
 
-  previewImage: { width: '100%', height: '100%', resizeMode: 'contain' },
+  previewImage: { 
+    width: '100%', 
+    height: '100%', 
+    resizeMode: 'cover' 
+  },
 
   button: {
     backgroundColor: '#2F343A',
@@ -208,18 +234,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  buttonText: { color: '#fff', fontWeight: 'bold' },
+  buttonText: { 
+    color: '#fff', 
+    fontWeight: 'bold',
+    fontSize: 16 
+  },
 
   disabledButton: {
     backgroundColor: '#BDBDBD',
-    borderRadius: 10,
-    paddingVertical: 14,
+    borderRadius: 12,
+    padding: 18,
     alignItems: 'center',
-  },
-
-  disabledText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '500',
   },
 });

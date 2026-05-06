@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  ActivityIndicator, // Tambahkan ini untuk feedback loading
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -16,6 +17,7 @@ import { supabase } from '../../config/supabase';
 
 export default function CustomerSignup() {
   const router = useRouter();
+  const [loading, setLoading] = useState(false); // State loading
   const [formData, setFormData] = useState({
     nama: '',
     email: '',
@@ -24,14 +26,48 @@ export default function CustomerSignup() {
     phone: '',
   });
 
+  // Fungsi Validasi Nomor WhatsApp
+  const validateWhatsApp = (number: string) => {
+    // Menghapus karakter non-digit
+    const cleanNumber = number.replace(/\D/g, '');
+
+    // Validasi:
+    // 1. Tidak boleh terlalu pendek (min 10 digit standar internasional)
+    // 2. Tidak boleh terlalu panjang (max 15 digit)
+    // 3. Masukkan logika angka acak (seperti 123456 tidak valid)
+    const isTooShort = cleanNumber.length < 10;
+    const isRepeatedOrSequential =
+      /^(.)\1+$/.test(cleanNumber) || '1234567890'.includes(cleanNumber);
+
+    if (isTooShort)
+      return { valid: false, msg: 'Nomor terlalu pendek (Minimal 10 digit)' };
+    if (isRepeatedOrSequential)
+      return {
+        valid: false,
+        msg: 'Format nomor tidak valid atau terlalu simpel',
+      };
+
+    return { valid: true };
+  };
+
   const handleSignup = async () => {
     const { nama, email, password, confirmPassword, phone } = formData;
 
+    // 1. Validasi Field Kosong
     if (!nama || !email || !password || !phone)
       return Alert.alert('Error', 'Semua field harus diisi');
+
+    // 2. Validasi Match Password
     if (password !== confirmPassword)
       return Alert.alert('Error', 'Password tidak cocok');
 
+    // 3. Validasi Nomor WhatsApp
+    const whatsappCheck = validateWhatsApp(phone);
+    if (!whatsappCheck.valid) {
+      return Alert.alert('Nomor Tidak Valid', whatsappCheck.msg);
+    }
+
+    setLoading(true); // Mulai loading
     try {
       // 1. SignUp ke Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -66,6 +102,8 @@ export default function CustomerSignup() {
       router.push('/customer/login');
     } catch (error: any) {
       Alert.alert('Signup Gagal', error.message);
+    } finally {
+      setLoading(false); // Matikan loading
     }
   };
 
@@ -78,15 +116,10 @@ export default function CustomerSignup() {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Logo */}
         <Logo width={60} height={60} />
-
-        {/* Title */}
         <Text style={styles.title}>Sign Up as Customer</Text>
 
-        {/* Card */}
         <View style={styles.card}>
-          {/* Nama */}
           <Text style={styles.label}>Nama</Text>
           <TextInput
             style={styles.input}
@@ -96,17 +129,17 @@ export default function CustomerSignup() {
             onChangeText={(txt) => setFormData({ ...formData, nama: txt })}
           />
 
-          {/* Email */}
           <Text style={styles.label}>Email</Text>
           <TextInput
             style={styles.input}
             placeholder="Masukan email anda"
             placeholderTextColor="#999"
+            keyboardType="email-address"
+            autoCapitalize="none"
             value={formData.email}
             onChangeText={(txt) => setFormData({ ...formData, email: txt })}
           />
 
-          {/* Password */}
           <Text style={styles.label}>Password</Text>
           <TextInput
             style={styles.input}
@@ -117,7 +150,6 @@ export default function CustomerSignup() {
             onChangeText={(txt) => setFormData({ ...formData, password: txt })}
           />
 
-          {/* Konfirmasi Password */}
           <Text style={styles.label}>Konfirmasi Password</Text>
           <TextInput
             style={styles.input}
@@ -130,23 +162,28 @@ export default function CustomerSignup() {
             }
           />
 
-          {/* Nomor Whatsapp */}
           <Text style={styles.label}>Nomor Whatsapp</Text>
           <TextInput
             style={styles.input}
-            placeholder="Masukan nomor whatsapp"
+            placeholder="Cth: 081234567890"
             placeholderTextColor="#999"
             keyboardType="phone-pad"
             value={formData.phone}
             onChangeText={(txt) => setFormData({ ...formData, phone: txt })}
           />
 
-          {/* Sign Up Button */}
-          <TouchableOpacity style={styles.signupButton} onPress={handleSignup}>
-            <Text style={styles.signupText}>Sign up</Text>
+          <TouchableOpacity
+            style={[styles.signupButton, loading && { opacity: 0.7 }]}
+            onPress={handleSignup}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.signupText}>Sign up</Text>
+            )}
           </TouchableOpacity>
 
-          {/* Login */}
           <View style={styles.loginRow}>
             <Text>Sudah punya akun? </Text>
             <TouchableOpacity onPress={() => router.push('/customer/login')}>
